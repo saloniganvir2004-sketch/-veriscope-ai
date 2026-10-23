@@ -1,0 +1,342 @@
+"""
+VeriScope AI - UI Components, Chart Generators & Styling Utilities
+Implements a refined editorial intelligence design system with light stone surfaces,
+deep midnight navy typography, Plotly visualization builders, and token highlighters.
+"""
+
+import streamlit as st
+import plotly.graph_objects as go
+import re
+from typing import List, Dict, Any, Optional
+from pathlib import Path
+
+import config
+
+
+def load_custom_css():
+    """Injects refined editorial intelligence styling with warm off-white surfaces."""
+    css = f"""
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    html, body, [class*="css"] {{
+        font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    }}
+
+    /* Base application background */
+    .stApp {{
+        background-color: {config.COLOR_THEME["bg_body"]};
+        color: {config.COLOR_THEME["text_main"]};
+    }}
+
+    /* Editorial card surfaces */
+    .veritas-card {{
+        background: {config.COLOR_THEME["surface"]};
+        border: 1px solid {config.COLOR_THEME["border"]};
+        border-radius: 8px;
+        padding: 22px 24px;
+        margin-bottom: 20px;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px 0 rgba(0, 0, 0, 0.02);
+    }}
+
+    .veritas-card-header {{
+        font-size: 1.05rem;
+        font-weight: 600;
+        color: {config.COLOR_THEME["text_main"]};
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }}
+
+    /* Metric summary cards */
+    .metric-container {{
+        background: {config.COLOR_THEME["surface"]};
+        border: 1px solid {config.COLOR_THEME["border"]};
+        border-radius: 8px;
+        padding: 18px 16px;
+        text-align: center;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+    }}
+    .metric-value {{
+        font-size: 1.85rem;
+        font-weight: 700;
+        color: {config.COLOR_THEME["text_main"]};
+        font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+        line-height: 1.2;
+    }}
+    .metric-label {{
+        font-size: 0.82rem;
+        color: {config.COLOR_THEME["text_muted"]};
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-top: 6px;
+        font-weight: 500;
+    }}
+
+    /* Refined Status Badges */
+    .badge-real {{
+        display: inline-block;
+        background-color: {config.COLOR_THEME["real_bg"]};
+        color: {config.COLOR_THEME["real"]};
+        border: 1px solid {config.COLOR_THEME["real_border"]};
+        padding: 5px 14px;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.95rem;
+    }}
+
+    .badge-fake {{
+        display: inline-block;
+        background-color: {config.COLOR_THEME["fake_bg"]};
+        color: {config.COLOR_THEME["fake"]};
+        border: 1px solid {config.COLOR_THEME["fake_border"]};
+        padding: 5px 14px;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.95rem;
+    }}
+
+    /* Epistemic Research Disclaimer */
+    .veritas-disclaimer {{
+        background: #F1F5F9;
+        border-left: 3px solid {config.COLOR_THEME["primary"]};
+        border-radius: 4px;
+        padding: 10px 14px;
+        margin: 12px 0 20px 0;
+        font-size: 0.85rem;
+        color: {config.COLOR_THEME["text_secondary"]};
+        line-height: 1.5;
+    }}
+
+    /* Document highlighted token spans */
+    .token-fake {{
+        background-color: rgba(220, 38, 38, 0.12);
+        border-bottom: 2px solid {config.COLOR_THEME["fake"]};
+        color: #991B1B;
+        padding: 1px 3px;
+        border-radius: 2px;
+        font-weight: 500;
+    }}
+    .token-real {{
+        background-color: rgba(21, 128, 61, 0.12);
+        border-bottom: 2px solid {config.COLOR_THEME["real"]};
+        color: #166534;
+        padding: 1px 3px;
+        border-radius: 2px;
+        font-weight: 500;
+    }}
+
+    /* Streamlit controls & button overrides */
+    .stButton>button {{
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        transition: all 0.15s ease-in-out;
+    }}
+
+    button[kind="primary"] {{
+        background-color: {config.COLOR_THEME["primary"]} !important;
+        color: #FFFFFF !important;
+        border: 1px solid {config.COLOR_THEME["primary"]} !important;
+    }}
+    button[kind="primary"]:hover {{
+        background-color: {config.COLOR_THEME["primary_hover"]} !important;
+        border-color: {config.COLOR_THEME["primary_hover"]} !important;
+    }}
+
+    /* Clean sidebar aesthetics */
+    [data-testid="stSidebar"] {{
+        background-color: #FFFFFF;
+        border-right: 1px solid {config.COLOR_THEME["border"]};
+    }}
+
+    /* Input text areas and file uploaders */
+    .stTextInput>div>div>input, .stTextArea>div>div>textarea {{
+        background-color: #FFFFFF !important;
+        border: 1px solid {config.COLOR_THEME["border_subtle"]} !important;
+        border-radius: 6px !important;
+        color: {config.COLOR_THEME["text_main"]} !important;
+    }}
+
+    /* Tabs styling */
+    .stTabs [data-baseweb="tab-list"] {{
+        gap: 8px;
+        border-bottom: 1px solid {config.COLOR_THEME["border"]};
+    }}
+    .stTabs [data-baseweb="tab"] {{
+        font-weight: 600;
+        font-size: 0.92rem;
+        color: {config.COLOR_THEME["text_muted"]};
+        padding: 10px 16px;
+    }}
+    .stTabs [aria-selected="true"] {{
+        color: {config.COLOR_THEME["primary"]} !important;
+        border-bottom-color: {config.COLOR_THEME["primary"]} !important;
+    }}
+    </style>
+    """
+    st.markdown(css, unsafe_allow_html=True)
+
+
+def render_brand_header(title: str, subtitle: Optional[str] = None):
+    """Renders clean editorial branding and page title."""
+    st.markdown(
+        f"""
+        <div style="margin-bottom: 20px; border-bottom: 1px solid {config.COLOR_THEME['border']}; padding-bottom: 14px;">
+            <div style="display: flex; align-items: baseline; gap: 10px;">
+                <span style="font-size: 1.8rem; font-weight: 800; letter-spacing: -0.03em; color: {config.COLOR_THEME['text_main']};">
+                    VeriScope <span style="color: {config.COLOR_THEME['primary']};">AI</span>
+                </span>
+                <span style="font-size: 0.88rem; color: {config.COLOR_THEME['text_muted']}; font-weight: 500;">
+                    {config.BRAND_TAGLINE}
+                </span>
+            </div>
+            <h2 style="font-size: 1.35rem; font-weight: 600; color: {config.COLOR_THEME['text_main']}; margin-top: 6px; margin-bottom: 2px;">
+                {title}
+            </h2>
+            {f'<p style="color: {config.COLOR_THEME["text_secondary"]}; font-size: 0.92rem; margin-top: 2px; margin-bottom: 0;">{subtitle}</p>' if subtitle else ''}
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_epistemic_disclaimer():
+    """Renders the standard research notice on epistemic verification boundaries."""
+    st.markdown(
+        f"""
+        <div class="veritas-disclaimer">
+            <strong>Notice:</strong> {config.DISCLAIMER_TEXT}
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_svg_asset(svg_path: Path, width: str = "100%"):
+    """Safely renders a local SVG vector illustration."""
+    if svg_path.exists():
+        svg_content = svg_path.read_text(encoding="utf-8")
+        st.markdown(f'<div style="width: {width}; margin: 8px 0;">{svg_content}</div>', unsafe_allow_html=True)
+
+
+def build_horizontal_bar_chart(
+    features: List[Dict[str, Any]],
+    title: str = "Feature Contributions",
+    height: int = 340,
+) -> go.Figure:
+    """
+    Creates an interactive horizontal bar chart for LIME or SHAP feature attributions.
+    Restrained sage green for Likely Real (negative weight).
+    Restrained coral red for Likely Fake (positive weight).
+    """
+    if not features:
+        fig = go.Figure()
+        fig.add_annotation(
+            text="No significant token attributions identified.",
+            xref="paper", yref="paper", showarrow=False,
+            font=dict(color="#64748B", size=13)
+        )
+        fig.update_layout(
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            height=height,
+        )
+        return fig
+
+    sorted_features = list(reversed(features))
+    tokens = [f["feature"] for f in sorted_features]
+    weights = [f["weight"] for f in sorted_features]
+    colors = [config.COLOR_THEME["fake"] if w > 0 else config.COLOR_THEME["real"] for w in weights]
+
+    fig = go.Figure(
+        go.Bar(
+            x=weights,
+            y=tokens,
+            orientation="h",
+            marker=dict(color=colors, line=dict(color="rgba(0,0,0,0.1)", width=0.5)),
+            hovertemplate="<b>%{y}</b><br>Impact: %{x:+.4f}<extra></extra>",
+        )
+    )
+
+    fig.update_layout(
+        title=dict(text=title, font=dict(color="#0F172A", size=13, family="Plus Jakarta Sans")),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        margin=dict(l=10, r=20, t=35, b=20),
+        height=height,
+        xaxis=dict(
+            title="Contribution (◀ Likely Real | Likely Fake ▶)",
+            titlefont=dict(size=11, color="#64748B"),
+            tickfont=dict(color="#64748B", size=10),
+            zeroline=True,
+            zerolinecolor="#94A3B8",
+            zerolinewidth=1,
+            gridcolor="#E2E8F0",
+        ),
+        yaxis=dict(
+            tickfont=dict(color="#1E293B", size=11, family="Plus Jakarta Sans"),
+            gridcolor="rgba(0,0,0,0)",
+        ),
+    )
+    return fig
+
+
+def build_confusion_matrix_heatmap(cm: List[List[int]], class_names: List[str] = config.LABEL_CLASSES) -> go.Figure:
+    """Creates a high-contrast editorial heatmap for the confusion matrix."""
+    z = cm
+    x = [f"Pred {c}" for c in class_names]
+    y = [f"True {c}" for c in class_names]
+
+    fig = go.Figure(
+        data=go.Heatmap(
+            z=z,
+            x=x,
+            y=y,
+            colorscale=[[0, "#F8FAFC"], [0.5, "#E2E8F0"], [1, "#0E7490"]],
+            showscale=False,
+            text=z,
+            texttemplate="%{text}",
+            textfont=dict(size=16, color="#0F172A", family="Plus Jakarta Sans"),
+        )
+    )
+
+    fig.update_layout(
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        margin=dict(l=10, r=10, t=30, b=10),
+        height=280,
+        xaxis=dict(tickfont=dict(color="#475569")),
+        yaxis=dict(tickfont=dict(color="#475569"), autorange="reversed"),
+    )
+    return fig
+
+
+def highlight_tokens_html(text: str, features: List[Dict[str, Any]]) -> str:
+    """
+    Subtly highlights words in the text corresponding to explanatory features:
+    - Soft coral highlight for tokens pushing toward Likely Fake
+    - Soft sage highlight for tokens pushing toward Likely Real
+    """
+    if not text or not features:
+        return text or ""
+
+    word_map = {}
+    for f in features:
+        word = f["feature"].lower()
+        if len(word) > 1:
+            word_map[word] = "fake" if f["weight"] > 0 else "real"
+
+    tokens = re.split(r"(\s+)", text)
+    highlighted = []
+
+    for t in tokens:
+        stripped = t.strip(".,!?:;\"'()[]{}").lower()
+        if stripped in word_map:
+            cls = "token-fake" if word_map[stripped] == "fake" else "token-real"
+            highlighted.append(f'<span class="{cls}">{t}</span>')
+        else:
+            highlighted.append(t)
+
+    return "".join(highlighted)

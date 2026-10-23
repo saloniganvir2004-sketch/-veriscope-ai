@@ -1,0 +1,32 @@
+{
+  "Logistic Regression": [
+    [
+      30,
+      0
+    ],
+    [
+      0,
+      30
+    ]
+  ],
+  "Multinomial Naive Bayes": [
+    [
+      30,
+      0
+    ],
+    [
+      0,
+      30
+    ]
+  ],
+  "Linear SVM": [
+    [
+      30,
+      0
+    ],
+    [
+      0,
+      30
+    ]
+  ]
+}

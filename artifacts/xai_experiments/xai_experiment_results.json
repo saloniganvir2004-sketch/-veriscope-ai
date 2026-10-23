@@ -1,0 +1,790 @@
+{
+  "total_cases_evaluated": 4,
+  "mean_top5_jaccard_agreement": 0.4077,
+  "mean_directional_concordance": 1.0,
+  "cases": [
+    {
+      "case_id": "case_1_real",
+      "type": "Clear Real",
+      "headline": "Federal Reserve Holds Benchmark Interest Rates Steady",
+      "prediction": "Likely Real",
+      "confidence": 0.7913,
+      "lime_top_features": [
+        {
+          "feature": "Benchmark",
+          "weight": -0.0208,
+          "pushes_toward": "Likely Real",
+          "magnitude": 0.0208
+        },
+        {
+          "feature": "rate",
+          "weight": -0.0207,
+          "pushes_toward": "Likely Real",
+          "magnitude": 0.0207
+        },
+        {
+          "feature": "year",
+          "weight": -0.019,
+          "pushes_toward": "Likely Real",
+          "magnitude": 0.019
+        },
+        {
+          "feature": "Committee",
+          "weight": -0.0173,
+          "pushes_toward": "Likely Real",
+          "magnitude": 0.0173
+        },
+        {
+          "feature": "Rates",
+          "weight": -0.017,
+          "pushes_toward": "Likely Real",
+          "magnitude": 0.017
+        }
+      ],
+      "shap_top_features": [
+        {
+          "feature": "rate",
+          "weight": -0.044,
+          "pushes_toward": "Likely Real",
+          "magnitude": 0.044
+        },
+        {
+          "feature": "year",
+          "weight": -0.0374,
+          "pushes_toward": "Likely Real",
+          "magnitude": 0.0374
+        },
+        {
+          "feature": "benchmark",
+          "weight": -0.0351,
+          "pushes_toward": "Likely Real",
+          "magnitude": 0.0351
+        },
+        {
+          "feature": "committee",
+          "weight": -0.0325,
+          "pushes_toward": "Likely Real",
+          "magnitude": 0.0325
+        },
+        {
+          "feature": "federal reserve",
+          "weight": -0.0325,
+          "pushes_toward": "Likely Real",
+          "magnitude": 0.0325
+        }
+      ],
+      "agreement_k5": {
+        "k": 5,
+        "jaccard_similarity": 0.6667,
+        "overlap_count": 4,
+        "overlap_words": [
+          "benchmark",
+          "committee",
+          "rate",
+          "year"
+        ],
+        "union_count": 6,
+        "directional_concordance": 1.0
+      },
+      "agreement_k10": {
+        "k": 10,
+        "jaccard_similarity": 0.6667,
+        "overlap_count": 8,
+        "overlap_words": [
+          "benchmark",
+          "committee",
+          "inflation",
+          "noted",
+          "rate",
+          "rates",
+          "reserve",
+          "year"
+        ],
+        "union_count": 12,
+        "directional_concordance": 1.0
+      },
+      "fidelity": {
+        "LIME": {
+          "base_confidence": 0.7913,
+          "confidence_after_top_k_mask": 0.7539,
+          "top_k_drop": 0.0374,
+          "confidence_after_random_mask": 0.7675,
+          "random_drop": 0.0238,
+          "fidelity_advantage": 0.0136,
+          "interpretation": "Moderate/Low fidelity: masked words alone did not disproportionately shift confidence."
+        },
+        "SHAP": {
+          "base_confidence": 0.7913,
+          "confidence_after_top_k_mask": 0.7597,
+          "top_k_drop": 0.0316,
+          "confidence_after_random_mask": 0.7727,
+          "random_drop": 0.0186,
+          "fidelity_advantage": 0.013,
+          "interpretation": "Moderate/Low fidelity: masked words alone did not disproportionately shift confidence."
+        }
+      },
+      "stability": {
+        "LIME": {
+          "explainer": "LIME",
+          "k": 5,
+          "average_stability_jaccard": 0.6984,
+          "trials": [
+            {
+              "trial": 1,
+              "perturbed_overlap": 0.6667,
+              "common_words": [
+                "rate",
+                "benchmark",
+                "year",
+                "rates"
+              ]
+            },
+            {
+              "trial": 2,
+              "perturbed_overlap": 1.0,
+              "common_words": [
+                "rates",
+                "benchmark",
+                "rate",
+                "committee",
+                "year"
+              ]
+            },
+            {
+              "trial": 3,
+              "perturbed_overlap": 0.4286,
+              "common_words": [
+                "rate",
+                "benchmark",
+                "year"
+              ]
+            }
+          ]
+        },
+        "SHAP": {
+          "explainer": "SHAP",
+          "k": 5,
+          "average_stability_jaccard": 0.8889,
+          "trials": [
+            {
+              "trial": 1,
+              "perturbed_overlap": 0.6667,
+              "common_words": [
+                "rate",
+                "benchmark",
+                "year",
+                "committee"
+              ]
+            },
+            {
+              "trial": 2,
+              "perturbed_overlap": 1.0,
+              "common_words": [
+                "benchmark",
+                "federal reserve",
+                "rate",
+                "committee",
+                "year"
+              ]
+            },
+            {
+              "trial": 3,
+              "perturbed_overlap": 1.0,
+              "common_words": [
+                "benchmark",
+                "federal reserve",
+                "rate",
+                "committee",
+                "year"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "case_id": "case_2_fake",
+      "type": "Clear Disinformation",
+      "headline": "BOMBSHELL: Secret Satellite Transmits Brainwaves to Rig Election",
+      "prediction": "Likely Fake",
+      "confidence": 0.7952,
+      "lime_top_features": [
+        {
+          "feature": "secretly",
+          "weight": 0.0187,
+          "pushes_toward": "Likely Fake",
+          "magnitude": 0.0187
+        },
+        {
+          "feature": "Satellite",
+          "weight": 0.0183,
+          "pushes_toward": "Likely Fake",
+          "magnitude": 0.0183
+        },
+        {
+          "feature": "Secret",
+          "weight": 0.0174,
+          "pushes_toward": "Likely Fake",
+          "magnitude": 0.0174
+        },
+        {
+          "feature": "news",
+          "weight": 0.0168,
+          "pushes_toward": "Likely Fake",
+          "magnitude": 0.0168
+        },
+        {
+          "feature": "satellite",
+          "weight": 0.0166,
+          "pushes_toward": "Likely Fake",
+          "magnitude": 0.0166
+        }
+      ],
+      "shap_top_features": [
+        {
+          "feature": "satellite",
+          "weight": 0.0832,
+          "pushes_toward": "Likely Fake",
+          "magnitude": 0.0832
+        },
+        {
+          "feature": "secret",
+          "weight": 0.0408,
+          "pushes_toward": "Likely Fake",
+          "magnitude": 0.0408
+        },
+        {
+          "feature": "globalist",
+          "weight": 0.0392,
+          "pushes_toward": "Likely Fake",
+          "magnitude": 0.0392
+        },
+        {
+          "feature": "election",
+          "weight": 0.036,
+          "pushes_toward": "Likely Fake",
+          "magnitude": 0.036
+        },
+        {
+          "feature": "machines",
+          "weight": 0.036,
+          "pushes_toward": "Likely Fake",
+          "magnitude": 0.036
+        }
+      ],
+      "agreement_k5": {
+        "k": 5,
+        "jaccard_similarity": 0.2857,
+        "overlap_count": 2,
+        "overlap_words": [
+          "satellite",
+          "secret"
+        ],
+        "union_count": 7,
+        "directional_concordance": 1.0
+      },
+      "agreement_k10": {
+        "k": 10,
+        "jaccard_similarity": 0.7273,
+        "overlap_count": 8,
+        "overlap_words": [
+          "corrupt",
+          "election",
+          "globalist",
+          "media",
+          "news",
+          "satellite",
+          "secret",
+          "secretly"
+        ],
+        "union_count": 11,
+        "directional_concordance": 1.0
+      },
+      "fidelity": {
+        "LIME": {
+          "base_confidence": 0.7952,
+          "confidence_after_top_k_mask": 0.7589,
+          "top_k_drop": 0.0363,
+          "confidence_after_random_mask": 0.77,
+          "random_drop": 0.0252,
+          "fidelity_advantage": 0.0111,
+          "interpretation": "Moderate/Low fidelity: masked words alone did not disproportionately shift confidence."
+        },
+        "SHAP": {
+          "base_confidence": 0.7952,
+          "confidence_after_top_k_mask": 0.7548,
+          "top_k_drop": 0.0404,
+          "confidence_after_random_mask": 0.7792,
+          "random_drop": 0.016,
+          "fidelity_advantage": 0.0244,
+          "interpretation": "Moderate/Low fidelity: masked words alone did not disproportionately shift confidence."
+        }
+      },
+      "stability": {
+        "LIME": {
+          "explainer": "LIME",
+          "k": 5,
+          "average_stability_jaccard": 0.4484,
+          "trials": [
+            {
+              "trial": 1,
+              "perturbed_overlap": 0.6667,
+              "common_words": [
+                "news",
+                "secretly",
+                "satellite",
+                "globalist"
+              ]
+            },
+            {
+              "trial": 2,
+              "perturbed_overlap": 0.25,
+              "common_words": [
+                "secretly",
+                "globalist"
+              ]
+            },
+            {
+              "trial": 3,
+              "perturbed_overlap": 0.4286,
+              "common_words": [
+                "news",
+                "secretly",
+                "satellite"
+              ]
+            }
+          ]
+        },
+        "SHAP": {
+          "explainer": "SHAP",
+          "k": 5,
+          "average_stability_jaccard": 0.8095,
+          "trials": [
+            {
+              "trial": 1,
+              "perturbed_overlap": 0.4286,
+              "common_words": [
+                "satellite",
+                "machines",
+                "globalist"
+              ]
+            },
+            {
+              "trial": 2,
+              "perturbed_overlap": 1.0,
+              "common_words": [
+                "election",
+                "machines",
+                "secret",
+                "satellite",
+                "globalist"
+              ]
+            },
+            {
+              "trial": 3,
+              "perturbed_overlap": 1.0,
+              "common_words": [
+                "election",
+                "machines",
+                "secret",
+                "satellite",
+                "globalist"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "case_id": "case_3_health_fake",
+      "type": "Medical Disinformation",
+      "headline": "Miracle Herbal Extract Dissolves Cancer Tumors Overnight",
+      "prediction": "Likely Fake",
+      "confidence": 0.7669,
+      "lime_top_features": [
+        {
+          "feature": "Corrupt",
+          "weight": 0.0208,
+          "pushes_toward": "Likely Fake",
+          "magnitude": 0.0208
+        },
+        {
+          "feature": "Herbal",
+          "weight": 0.0174,
+          "pushes_toward": "Likely Fake",
+          "magnitude": 0.0174
+        },
+        {
+          "feature": "Cancer",
+          "weight": 0.0168,
+          "pushes_toward": "Likely Fake",
+          "magnitude": 0.0168
+        },
+        {
+          "feature": "secret",
+          "weight": 0.0166,
+          "pushes_toward": "Likely Fake",
+          "magnitude": 0.0166
+        },
+        {
+          "feature": "Extract",
+          "weight": 0.0163,
+          "pushes_toward": "Likely Fake",
+          "magnitude": 0.0163
+        }
+      ],
+      "shap_top_features": [
+        {
+          "feature": "doctors",
+          "weight": 0.0717,
+          "pushes_toward": "Likely Fake",
+          "magnitude": 0.0717
+        },
+        {
+          "feature": "miracle",
+          "weight": 0.0717,
+          "pushes_toward": "Likely Fake",
+          "magnitude": 0.0717
+        },
+        {
+          "feature": "secret",
+          "weight": 0.0446,
+          "pushes_toward": "Likely Fake",
+          "magnitude": 0.0446
+        },
+        {
+          "feature": "cancer",
+          "weight": 0.0424,
+          "pushes_toward": "Likely Fake",
+          "magnitude": 0.0424
+        },
+        {
+          "feature": "tumors",
+          "weight": 0.0424,
+          "pushes_toward": "Likely Fake",
+          "magnitude": 0.0424
+        }
+      ],
+      "agreement_k5": {
+        "k": 5,
+        "jaccard_similarity": 0.25,
+        "overlap_count": 2,
+        "overlap_words": [
+          "cancer",
+          "secret"
+        ],
+        "union_count": 8,
+        "directional_concordance": 1.0
+      },
+      "agreement_k10": {
+        "k": 10,
+        "jaccard_similarity": 0.25,
+        "overlap_count": 4,
+        "overlap_words": [
+          "cancer",
+          "corrupt",
+          "miracle",
+          "secret"
+        ],
+        "union_count": 16,
+        "directional_concordance": 1.0
+      },
+      "fidelity": {
+        "LIME": {
+          "base_confidence": 0.7669,
+          "confidence_after_top_k_mask": 0.7239,
+          "top_k_drop": 0.043,
+          "confidence_after_random_mask": 0.7491,
+          "random_drop": 0.0178,
+          "fidelity_advantage": 0.0252,
+          "interpretation": "Moderate/Low fidelity: masked words alone did not disproportionately shift confidence."
+        },
+        "SHAP": {
+          "base_confidence": 0.7669,
+          "confidence_after_top_k_mask": 0.7178,
+          "top_k_drop": 0.0491,
+          "confidence_after_random_mask": 0.7358,
+          "random_drop": 0.0311,
+          "fidelity_advantage": 0.018,
+          "interpretation": "Moderate/Low fidelity: masked words alone did not disproportionately shift confidence."
+        }
+      },
+      "stability": {
+        "LIME": {
+          "explainer": "LIME",
+          "k": 5,
+          "average_stability_jaccard": 0.4286,
+          "trials": [
+            {
+              "trial": 1,
+              "perturbed_overlap": 0.4286,
+              "common_words": [
+                "corrupt",
+                "cancer",
+                "dissolves"
+              ]
+            },
+            {
+              "trial": 2,
+              "perturbed_overlap": 0.4286,
+              "common_words": [
+                "corrupt",
+                "secret",
+                "cancer"
+              ]
+            },
+            {
+              "trial": 3,
+              "perturbed_overlap": 0.4286,
+              "common_words": [
+                "corrupt",
+                "secret",
+                "cancer"
+              ]
+            }
+          ]
+        },
+        "SHAP": {
+          "explainer": "SHAP",
+          "k": 5,
+          "average_stability_jaccard": 1.0,
+          "trials": [
+            {
+              "trial": 1,
+              "perturbed_overlap": 1.0,
+              "common_words": [
+                "cancer",
+                "miracle",
+                "tumors",
+                "secret",
+                "doctors"
+              ]
+            },
+            {
+              "trial": 2,
+              "perturbed_overlap": 1.0,
+              "common_words": [
+                "cancer",
+                "miracle",
+                "tumors",
+                "secret",
+                "doctors"
+              ]
+            },
+            {
+              "trial": 3,
+              "perturbed_overlap": 1.0,
+              "common_words": [
+                "cancer",
+                "miracle",
+                "tumors",
+                "secret",
+                "doctors"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "case_id": "case_4_science_real",
+      "type": "Scientific News",
+      "headline": "James Webb Space Telescope Observes Atmospheric Composition of Exoplanet",
+      "prediction": "Likely Real",
+      "confidence": 0.7397,
+      "lime_top_features": [
+        {
+          "feature": "Space",
+          "weight": -0.0223,
+          "pushes_toward": "Likely Real",
+          "magnitude": 0.0223
+        },
+        {
+          "feature": "Webb",
+          "weight": -0.0205,
+          "pushes_toward": "Likely Real",
+          "magnitude": 0.0205
+        },
+        {
+          "feature": "James",
+          "weight": -0.0176,
+          "pushes_toward": "Likely Real",
+          "magnitude": 0.0176
+        },
+        {
+          "feature": "water",
+          "weight": -0.0172,
+          "pushes_toward": "Likely Real",
+          "magnitude": 0.0172
+        },
+        {
+          "feature": "benchmark",
+          "weight": -0.017,
+          "pushes_toward": "Likely Real",
+          "magnitude": 0.017
+        }
+      ],
+      "shap_top_features": [
+        {
+          "feature": "dioxide",
+          "weight": -0.0599,
+          "pushes_toward": "Likely Real",
+          "magnitude": 0.0599
+        },
+        {
+          "feature": "water",
+          "weight": -0.0394,
+          "pushes_toward": "Likely Real",
+          "magnitude": 0.0394
+        },
+        {
+          "feature": "benchmark",
+          "weight": -0.0385,
+          "pushes_toward": "Likely Real",
+          "magnitude": 0.0385
+        },
+        {
+          "feature": "exoplanet",
+          "weight": -0.0354,
+          "pushes_toward": "Likely Real",
+          "magnitude": 0.0354
+        },
+        {
+          "feature": "james",
+          "weight": -0.0354,
+          "pushes_toward": "Likely Real",
+          "magnitude": 0.0354
+        }
+      ],
+      "agreement_k5": {
+        "k": 5,
+        "jaccard_similarity": 0.4286,
+        "overlap_count": 3,
+        "overlap_words": [
+          "benchmark",
+          "james",
+          "water"
+        ],
+        "union_count": 7,
+        "directional_concordance": 1.0
+      },
+      "agreement_k10": {
+        "k": 10,
+        "jaccard_similarity": 0.5385,
+        "overlap_count": 7,
+        "overlap_words": [
+          "benchmark",
+          "exoplanet",
+          "james",
+          "space",
+          "telescope",
+          "water",
+          "webb"
+        ],
+        "union_count": 13,
+        "directional_concordance": 1.0
+      },
+      "fidelity": {
+        "LIME": {
+          "base_confidence": 0.7397,
+          "confidence_after_top_k_mask": 0.6862,
+          "top_k_drop": 0.0535,
+          "confidence_after_random_mask": 0.7127,
+          "random_drop": 0.027,
+          "fidelity_advantage": 0.0265,
+          "interpretation": "Moderate/Low fidelity: masked words alone did not disproportionately shift confidence."
+        },
+        "SHAP": {
+          "base_confidence": 0.7397,
+          "confidence_after_top_k_mask": 0.6889,
+          "top_k_drop": 0.0508,
+          "confidence_after_random_mask": 0.707,
+          "random_drop": 0.0327,
+          "fidelity_advantage": 0.0181,
+          "interpretation": "Moderate/Low fidelity: masked words alone did not disproportionately shift confidence."
+        }
+      },
+      "stability": {
+        "LIME": {
+          "explainer": "LIME",
+          "k": 5,
+          "average_stability_jaccard": 0.8889,
+          "trials": [
+            {
+              "trial": 1,
+              "perturbed_overlap": 1.0,
+              "common_words": [
+                "telescope",
+                "james",
+                "space",
+                "water",
+                "webb"
+              ]
+            },
+            {
+              "trial": 2,
+              "perturbed_overlap": 0.6667,
+              "common_words": [
+                "telescope",
+                "james",
+                "water",
+                "webb"
+              ]
+            },
+            {
+              "trial": 3,
+              "perturbed_overlap": 1.0,
+              "common_words": [
+                "telescope",
+                "james",
+                "space",
+                "water",
+                "webb"
+              ]
+            }
+          ]
+        },
+        "SHAP": {
+          "explainer": "SHAP",
+          "k": 5,
+          "average_stability_jaccard": 1.0,
+          "trials": [
+            {
+              "trial": 1,
+              "perturbed_overlap": 1.0,
+              "common_words": [
+                "james",
+                "benchmark",
+                "water",
+                "exoplanet",
+                "dioxide"
+              ]
+            },
+            {
+              "trial": 2,
+              "perturbed_overlap": 1.0,
+              "common_words": [
+                "james",
+                "benchmark",
+                "water",
+                "exoplanet",
+                "dioxide"
+              ]
+            },
+            {
+              "trial": 3,
+              "perturbed_overlap": 1.0,
+              "common_words": [
+                "james",
+                "benchmark",
+                "water",
+                "exoplanet",
+                "dioxide"
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

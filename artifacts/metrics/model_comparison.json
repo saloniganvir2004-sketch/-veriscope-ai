@@ -1,0 +1,67 @@
+{
+  "best_model_name": "Logistic Regression",
+  "comparison": {
+    "Logistic Regression": {
+      "validation": {
+        "accuracy": 1.0,
+        "macro_f1": 1.0,
+        "macro_precision": 1.0,
+        "macro_recall": 1.0
+      },
+      "test": {
+        "accuracy": 1.0,
+        "macro_f1": 1.0,
+        "macro_precision": 1.0,
+        "macro_recall": 1.0
+      }
+    },
+    "Multinomial Naive Bayes": {
+      "validation": {
+        "accuracy": 1.0,
+        "macro_f1": 1.0,
+        "macro_precision": 1.0,
+        "macro_recall": 1.0
+      },
+      "test": {
+        "accuracy": 1.0,
+        "macro_f1": 1.0,
+        "macro_precision": 1.0,
+        "macro_recall": 1.0
+      }
+    },
+    "Linear SVM": {
+      "validation": {
+        "accuracy": 1.0,
+        "macro_f1": 1.0,
+        "macro_precision": 1.0,
+        "macro_recall": 1.0
+      },
+      "test": {
+        "accuracy": 1.0,
+        "macro_f1": 1.0,
+        "macro_precision": 1.0,
+        "macro_recall": 1.0
+      }
+    }
+  },
+  "test_evaluations": {
+    "Logistic Regression": {
+      "accuracy": 1.0,
+      "macro_f1": 1.0,
+      "macro_precision": 1.0,
+      "macro_recall": 1.0
+    },
+    "Multinomial Naive Bayes": {
+      "accuracy": 1.0,
+      "macro_f1": 1.0,
+      "macro_precision": 1.0,
+      "macro_recall": 1.0
+    },
+    "Linear SVM": {
+      "accuracy": 1.0,
+      "macro_f1": 1.0,
+      "macro_precision": 1.0,
+      "macro_recall": 1.0
+    }
+  }
+}

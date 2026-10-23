@@ -1,0 +1,22 @@
+{
+  "total_records": 400,
+  "null_counts": {
+    "title": 0,
+    "text": 0,
+    "label": 0,
+    "category": 0
+  },
+  "empty_text_records": 0,
+  "duplicate_texts": 384,
+  "duplicate_titles": 0,
+  "class_distribution": {
+    "Likely Real": 200,
+    "Likely Fake": 200
+  },
+  "word_count_summary": {
+    "mean_words": 95.75,
+    "median_words": 93.0,
+    "min_words": 76,
+    "max_words": 129
+  }
+}
