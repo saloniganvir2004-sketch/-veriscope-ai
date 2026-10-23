@@ -1,7 +1,7 @@
 """
-VeriScope AI - Page 6: About & Research Methodology
-Academic documentation, mathematical formulations, data provenance,
-epistemic limitations, and MSc Viva examination preparation.
+VeriScope AI - Page 6: About & Project Team
+Academic documentation, project team member allocations, research methodology,
+mathematical formulations, epistemic limitations, and MSc Viva examination preparation.
 """
 
 import streamlit as st
@@ -9,16 +9,17 @@ import streamlit as st
 import config
 from src.utils import load_custom_css, render_brand_header, render_epistemic_disclaimer
 
-st.set_page_config(page_title="About & Research | VeriScope AI", page_icon="📖", layout="wide")
+st.set_page_config(page_title="About & Team | VeriScope AI", page_icon="📖", layout="wide")
 load_custom_css()
 
 render_brand_header(
-    title="Research Architecture & Academic Methodology",
-    subtitle="Full technical documentation, mathematical formulations, and MSc viva examination defense.",
+    title="Project Team & Academic Methodology",
+    subtitle="Team member responsibilities, system architecture, mathematical formulations, and MSc viva defense documentation.",
 )
 
-# Research Navigation Tabs
-tab_overview, tab_xai, tab_leakage, tab_viva = st.tabs([
+# Navigation Tabs
+tab_team, tab_overview, tab_xai, tab_leakage, tab_viva = st.tabs([
+    "👥 Project Team & Responsibilities",
     "📐 Machine Learning Pipeline",
     "🔬 Explainable AI (LIME vs SHAP)",
     "🛡️ The Publisher Leakage Problem",
@@ -26,7 +27,144 @@ tab_overview, tab_xai, tab_leakage, tab_viva = st.tabs([
 ])
 
 # -----------------------------------------------------------------------------
-# TAB 1: MACHINE LEARNING PIPELINE
+# TAB 1: PROJECT TEAM & RESPONSIBILITIES
+# -----------------------------------------------------------------------------
+with tab_team:
+    st.markdown("### MSc Project Team & Work Allocation")
+    st.markdown(
+        """
+        <div style="background: #F1F5F9; border-left: 3px solid #0E7490; border-radius: 4px; padding: 12px 16px; margin-bottom: 24px; font-size: 0.9rem; color: #334155; line-height: 1.55;">
+            <strong>Team Coordination & Governance:</strong>
+            The task distributions below reflect proposed formal responsibilities across our five-member cohort.
+            To achieve a unified system, members collaborate across adjacent modules.
+            Assigned scope is distinguished from completed deliverables, with continuous integration maintained across code, models, and documentation.
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    team_members = [
+        {
+            "num": 1,
+            "name": "Ayushman Kumar",
+            "enrolment": "A010175625019",
+            "role": "Dataset and NLP Preprocessing",
+            "badge_color": "#0E7490",
+            "tasks": [
+                "Dataset inspection and loading.",
+                "Data cleaning and missing-value handling.",
+                "Duplicate detection and removal.",
+                "Exploratory data analysis and class-distribution analysis.",
+                "Label validation and dataset documentation.",
+                "Text normalization and NLP preprocessing.",
+                "Train/validation/test split preparation and leakage prevention.",
+            ],
+        },
+        {
+            "num": 2,
+            "name": "Astha Thapa",
+            "enrolment": "A010175625014",
+            "role": "Machine-Learning Models and Tuning",
+            "badge_color": "#334155",
+            "tasks": [
+                "TF-IDF feature extraction.",
+                "Logistic Regression, Multinomial Naive Bayes and Linear SVM implementations where supported.",
+                "Training and comparison of candidate models.",
+                "Hyperparameter tuning using appropriate validation procedures.",
+                "Model selection and saving the selected model and preprocessing pipeline.",
+                "Reproducible inference configuration and model documentation.",
+            ],
+        },
+        {
+            "num": 3,
+            "name": "Saloni Ganvir",
+            "enrolment": "A010175625017",
+            "role": "Explainable AI and Interpretation",
+            "badge_color": "#15803D",
+            "tasks": [
+                "LIME and SHAP integration.",
+                "Explanation visualizations.",
+                "Feature-contribution interpretation.",
+                "Case studies of representative predictions.",
+                "Explanation stability and quality checks where feasible.",
+                "Explainability-related testing and documentation.",
+                "Clear communication of the model's limitations.",
+            ],
+        },
+        {
+            "num": 4,
+            "name": "Sarvesh",
+            "enrolment": "A010175625016",
+            "role": "Web Application and OCR Integration",
+            "badge_color": "#D97706",
+            "tasks": [
+                "Streamlit interface and navigation.",
+                "Landing page and News Analyzer UI.",
+                "Manual headline/context input.",
+                "Image upload interface.",
+                "Tesseract OCR integration and extracted-text editing.",
+                "Integration with the trained classification pipeline.",
+                "Result display, error handling and usability improvements.",
+            ],
+        },
+        {
+            "num": 5,
+            "name": "Sri Rinith",
+            "enrolment": "A010175625018",
+            "role": "Evaluation, Testing and Integration",
+            "badge_color": "#7C3AED",
+            "tasks": [
+                "Evaluation metrics: accuracy, precision, recall and F1 score.",
+                "Confusion matrix and model comparison.",
+                "Error analysis and representative failure cases.",
+                "Unit and integration testing.",
+                "End-to-end workflow verification.",
+                "Git integration and change tracking.",
+                "Report, documentation and presentation preparation.",
+                "Regression testing after fixes.",
+            ],
+        },
+    ]
+
+    # Render Member Cards in a balanced layout
+    for m in team_members:
+        task_items_html = "".join([f"<li style='margin-bottom: 4px;'>{t}</li>" for t in m["tasks"]])
+        st.markdown(
+            f"""
+            <div class="veritas-card" style="margin-bottom: 18px; border-left: 4px solid {m['badge_color']};">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px;">
+                    <div>
+                        <div style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748B; font-weight: 600;">
+                            Member {m['num']}
+                        </div>
+                        <h4 style="font-size: 1.25rem; font-weight: 700; color: #0F172A; margin: 2px 0 6px 0;">
+                            {m['name']}
+                        </h4>
+                        <div style="font-size: 0.88rem; color: #334155;">
+                            <strong>Enrolment No.:</strong> <code style="background: #F1F5F9; color: #0E7490; padding: 2px 6px; border-radius: 4px; font-weight: 600;">{m['enrolment']}</code>
+                        </div>
+                    </div>
+                    <div>
+                        <span style="display: inline-block; background: {m['badge_color']}15; color: {m['badge_color']}; border: 1px solid {m['badge_color']}40; padding: 5px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;">
+                            {m['role']}
+                        </span>
+                    </div>
+                </div>
+                <div style="margin-top: 14px; border-top: 1px solid #E2E8F0; padding-top: 10px;">
+                    <div style="font-size: 0.82rem; text-transform: uppercase; color: #64748B; font-weight: 600; margin-bottom: 6px;">
+                        Assigned Responsibilities:
+                    </div>
+                    <ul style="font-size: 0.9rem; color: #334155; line-height: 1.55; margin: 0; padding-left: 20px;">
+                        {task_items_html}
+                    </ul>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+# -----------------------------------------------------------------------------
+# TAB 2: MACHINE LEARNING PIPELINE
 # -----------------------------------------------------------------------------
 with tab_overview:
     st.markdown("### System Architecture & Mathematical Foundations")
@@ -53,7 +191,7 @@ with tab_overview:
     st.markdown(
         """
         2. **Multinomial Naive Bayes:**
-           Models conditional word probability using Laplace smoothing ($\alpha = 0.1$):
+           Models conditional word probability using Laplace smoothing ($\\alpha = 0.1$):
         """
     )
     st.latex(r"P(x_i | y) = \frac{N_{yi} + \alpha}{N_y + \alpha |V|}")
@@ -68,14 +206,14 @@ with tab_overview:
     st.markdown("Fitted via 3-fold cross-validation on the training set using `CalibratedClassifierCV`.")
 
 # -----------------------------------------------------------------------------
-# TAB 2: EXPLAINABLE AI (LIME VS SHAP)
+# TAB 3: EXPLAINABLE AI (LIME VS SHAP)
 # -----------------------------------------------------------------------------
 with tab_xai:
     st.markdown("### Primary Research Contribution: LIME vs SHAP Comparative Analysis")
     st.markdown(
         r"""
         #### 1. LIME (Local Interpretable Model-agnostic Explanations)
-        LIME draws $M$ perturbed samples $z'$ around the document $x$, weights them by proximity $\pi_x(z)$,
+        LIME draws $M$ perturbed samples $z'$ around document $x$, weights them by proximity $\pi_x(z)$,
         and fits an interpretable sparse surrogate model $g \in G$:
         """
     )
@@ -115,7 +253,7 @@ with tab_xai:
     )
 
 # -----------------------------------------------------------------------------
-# TAB 3: THE PUBLISHER LEAKAGE PROBLEM
+# TAB 4: THE PUBLISHER LEAKAGE PROBLEM
 # -----------------------------------------------------------------------------
 with tab_leakage:
     st.markdown("### The Publisher Artifact Problem in Fake News Datasets")
@@ -145,7 +283,7 @@ with tab_leakage:
     )
 
 # -----------------------------------------------------------------------------
-# TAB 4: MSC VIVA DEFENSE PREPARATION
+# TAB 5: MSC VIVA DEFENSE PREPARATION
 # -----------------------------------------------------------------------------
 with tab_viva:
     st.markdown("### Master's Viva Defense Examination Guide")
@@ -209,9 +347,13 @@ with tab_viva:
     with st.expander("Q6: How does the Image OCR pipeline process visual screenshots?"):
         st.markdown(
             """
-            **Defense:** Uploaded news clippings and screenshots are decoded via PIL, orientation-corrected using EXIF metadata,
-            converted to high-contrast grayscale, and filtered with edge sharpening. Tesseract 5.5.2 extracts the textual contents,
-            which are cleaned and presented in an editable review window before feeding directly into the same leakage-sanitized
+            **Defense:** Uploaded news clippings and screenshots are decoded via Pillow, orientation-corrected using EXIF metadata
+            and Tesseract OSD, converted to high-contrast grayscale, and filtered with edge sharpening. Tesseract extracts the textual contents,
+            which are separated into candidate headline and context, and presented in an editable review window before feeding directly into the same leakage-sanitized
             TF-IDF inference and dual XAI attribution pipeline.
             """
         )
+
+# Epistemic notice at bottom
+st.write("")
+render_epistemic_disclaimer()

@@ -1,7 +1,9 @@
 """
 VeriScope AI - Page 2: News Analyzer Workspace
-Analyzes news stories supplied via direct text or image screenshots (OCR),
-computes calibrated model predictions, and renders dual LIME and SHAP explanations.
+Analyzes news stories supplied via exactly two input workflows:
+  Option 1: Manual text entry (separate headline and article context)
+  Option 2: Local image upload with Tesseract OCR text extraction and review
+Computes calibrated model predictions and renders dual LIME and SHAP explanations.
 """
 
 import io
@@ -17,18 +19,24 @@ from src.utils import (
     highlight_tokens_html,
 )
 from src.predict import predict_news, load_inference_pipeline
+from src.preprocessing import prepare_input_text
 from src.lime_explainer import VeritasLimeExplainer
 from src.shap_explainer import VeritasShapExplainer
 from src.database import save_analysis
 from src.evidence_retriever import LocalEvidenceRetriever
-from src.ocr import extract_text_from_image, validate_image_bytes
+from src.ocr import (
+    extract_text_from_image,
+    validate_image_bytes,
+    is_tesseract_available,
+    separate_headline_and_body,
+)
 
 st.set_page_config(page_title="News Analyzer | VeriScope AI", page_icon="📰", layout="wide")
 load_custom_css()
 
 render_brand_header(
-    title="Analyze a News Story",
-    subtitle="Paste an article or upload a screenshot to examine its classification and understand which words influenced the result.",
+    title="News Story Analyzer",
+    subtitle="Submit a story manually or upload a screenshot to inspect its classification and understand which words influenced the result.",
 )
 
 # -----------------------------------------------------------------------------
@@ -45,228 +53,272 @@ SAMPLE_FAKE = {
 }
 
 # -----------------------------------------------------------------------------
-# Session State Initialization (Ensures user inputs are never silently discarded)
+# Session State Initialization (Ensures user inputs are preserved across reruns)
 # -----------------------------------------------------------------------------
-if "text_headline" not in st.session_state:
-    st.session_state["text_headline"] = ""
-if "text_body" not in st.session_state:
-    st.session_state["text_body"] = ""
-if "ocr_extracted_text" not in st.session_state:
-    st.session_state["ocr_extracted_text"] = ""
-if "ocr_headline" not in st.session_state:
-    st.session_state["ocr_headline"] = ""
+if "widget_manual_headline" not in st.session_state:
+    st.session_state["widget_manual_headline"] = ""
+if "widget_manual_body" not in st.session_state:
+    st.session_state["widget_manual_body"] = ""
+if "widget_ocr_head_val" not in st.session_state:
+    st.session_state["widget_ocr_head_val"] = ""
+if "widget_ocr_body_val" not in st.session_state:
+    st.session_state["widget_ocr_body_val"] = ""
+if "ocr_raw_text" not in st.session_state:
+    st.session_state["ocr_raw_text"] = ""
 if "active_analysis" not in st.session_state:
     st.session_state["active_analysis"] = None
 if "record_saved" not in st.session_state:
     st.session_state["record_saved"] = False
 
-# -----------------------------------------------------------------------------
-# Two Input Modes: Paste Text & Upload Image
-# -----------------------------------------------------------------------------
-tab_text, tab_image = st.tabs(["📝 Paste Text", "📷 Upload Image (OCR)"])
+
+def run_pipeline_analysis(headline: str, body: str, source_type: str = "manual"):
+    """Executes validated inference pipeline and dual LIME/SHAP explainers."""
+    clean_h = (headline or "").strip()
+    clean_b = (body or "").strip()
+
+    with st.spinner("Analyzing linguistic patterns and generating LIME and SHAP explanations..."):
+        try:
+            pipeline = load_inference_pipeline()
+            pred_res = predict_news(clean_h, clean_b, pipeline=pipeline, remove_publisher_tags=True)
+
+            # Build unified text for XAI matching training format exactly
+            unified_doc = prepare_input_text(clean_h, clean_b, remove_publisher_tags=True)
+
+            lime_exp = VeritasLimeExplainer(pipeline)
+            lime_res = lime_exp.explain(unified_doc)
+
+            shap_exp = VeritasShapExplainer(pipeline)
+            shap_res = shap_exp.explain(unified_doc)
+
+            st.session_state["active_analysis"] = {
+                "source_type": source_type,
+                "headline": clean_h,
+                "text": clean_b,
+                "unified_doc": unified_doc,
+                "prediction": pred_res,
+                "lime": lime_res,
+                "shap": shap_res,
+            }
+            st.session_state["record_saved"] = False
+        except Exception as e:
+            st.error(f"Inference pipeline error: {str(e)}")
+
 
 # -----------------------------------------------------------------------------
-# TAB 1: TEXT INPUT WORKSPACE
+# Two Clear Input Options: Tabs
 # -----------------------------------------------------------------------------
-with tab_text:
-    st.markdown("##### Story Input")
+tab_manual, tab_ocr = st.tabs([
+    "📝 Option 1 — Enter News Manually",
+    "📷 Option 2 — Upload News Image (OCR)",
+])
 
-    # Sample loader and clear buttons
-    col_d1, col_d2, col_d3, _ = st.columns([1.3, 1.3, 1.2, 3.2])
-    with col_d1:
-        if st.button("Load Real Sample", help="Demonstration real news dispatch"):
-            st.session_state["text_headline"] = SAMPLE_REAL["title"]
-            st.session_state["text_body"] = SAMPLE_REAL["text"]
+# =============================================================================
+# OPTION 1: MANUAL NEWS ENTRY
+# =============================================================================
+with tab_manual:
+    st.markdown("##### Manual Story Submission")
+    st.caption("Provide both the headline and the article context separately for classification.")
+
+    # Demonstration loader and clear controls
+    col_s1, col_s2, col_s3, _ = st.columns([1.3, 1.3, 1.2, 3.2])
+    with col_s1:
+        if st.button("Load Real Sample", key="btn_load_real", help="Load sample real news dispatch"):
+            st.session_state["manual_headline"] = SAMPLE_REAL["title"]
+            st.session_state["manual_body"] = SAMPLE_REAL["text"]
+            st.session_state["widget_manual_headline"] = SAMPLE_REAL["title"]
+            st.session_state["widget_manual_body"] = SAMPLE_REAL["text"]
             st.session_state["active_analysis"] = None
             st.session_state["record_saved"] = False
             st.rerun()
 
-    with col_d2:
-        if st.button("Load Fake Sample", help="Demonstration disinformation claim"):
-            st.session_state["text_headline"] = SAMPLE_FAKE["title"]
-            st.session_state["text_body"] = SAMPLE_FAKE["text"]
+    with col_s2:
+        if st.button("Load Fake Sample", key="btn_load_fake", help="Load sample disinformation claim"):
+            st.session_state["manual_headline"] = SAMPLE_FAKE["title"]
+            st.session_state["manual_body"] = SAMPLE_FAKE["text"]
+            st.session_state["widget_manual_headline"] = SAMPLE_FAKE["title"]
+            st.session_state["widget_manual_body"] = SAMPLE_FAKE["text"]
             st.session_state["active_analysis"] = None
             st.session_state["record_saved"] = False
             st.rerun()
 
-    with col_d3:
-        if st.button("Clear Input", help="Reset all fields"):
-            st.session_state["text_headline"] = ""
-            st.session_state["text_body"] = ""
+    with col_s3:
+        if st.button("Clear Input", key="btn_clear_manual", help="Reset manual inputs"):
+            st.session_state["manual_headline"] = ""
+            st.session_state["manual_body"] = ""
+            st.session_state["widget_manual_headline"] = ""
+            st.session_state["widget_manual_body"] = ""
             st.session_state["active_analysis"] = None
             st.session_state["record_saved"] = False
             st.rerun()
 
-    headline_val = st.text_input(
-        "Headline or Claim Title",
-        value=st.session_state["text_headline"],
-        placeholder="Enter headline (e.g. Central Bank Holds Interest Rates Steady)...",
-        key="widget_headline_input",
+    # News Headline Field
+    m_headline_input = st.text_input(
+        "News Headline *",
+        placeholder="Enter news headline (e.g., Central Bank Holds Benchmark Interest Rates Steady)...",
+        key="widget_manual_headline",
     )
-    # Synchronize state
-    st.session_state["text_headline"] = headline_val
 
-    body_val = st.text_area(
-        "Article Body or Context",
-        value=st.session_state["text_body"],
-        placeholder="Paste full news story or social media post text here...",
-        height=180,
-        key="widget_body_input",
+    # News Context / Article Text Field
+    m_body_input = st.text_area(
+        "News Context / Article Text *",
+        placeholder="Paste full news story context or article paragraphs here...",
+        height=200,
+        key="widget_manual_body",
     )
-    st.session_state["text_body"] = body_val
 
-    # Character and word counters
-    total_chars = len(headline_val) + len(body_val)
-    total_words = len(f"{headline_val} {body_val}".split()) if total_chars > 0 else 0
+    # Word and character counts
+    m_char_count = len(m_headline_input) + len(m_body_input)
+    m_word_count = len(f"{m_headline_input} {m_body_input}".split()) if m_char_count > 0 else 0
 
     col_meta, col_btn = st.columns([3, 1])
     with col_meta:
-        st.caption(f"{total_words} words · {total_chars} characters (max {config.OCR_CONFIG['max_text_length']:,})")
+        st.caption(f"{m_word_count} words · {m_char_count} characters (Max {config.OCR_CONFIG['max_text_length']:,})")
 
     with col_btn:
-        trigger_text_analysis = st.button("Analyze News Story", type="primary", use_container_width=True)
+        trigger_manual = st.button("Analyze News", type="primary", use_container_width=True, key="btn_manual_analyze")
 
-    if trigger_text_analysis:
-        if not headline_val.strip() and not body_val.strip():
-            st.error("Please enter a headline or article text before analyzing.")
-        elif total_words < 5:
+    if trigger_manual:
+        # Strict field validation
+        has_h = bool(m_headline_input.strip())
+        has_b = bool(m_body_input.strip())
+
+        if not has_h and not has_b:
+            st.error("Please enter both a News Headline and News Context / Article Text before analyzing.")
+        elif not has_h:
+            st.error("News Headline is required. Please provide a headline for the article.")
+        elif not has_b:
+            st.error("News Context / Article Text is required. Please provide the article body.")
+        elif m_word_count < 5:
             st.warning("The submitted text is very short (under 5 words). Short snippets may yield low-confidence predictions.")
-            run_anyway = True
-        elif total_chars > config.OCR_CONFIG["max_text_length"]:
+            run_pipeline_analysis(m_headline_input, m_body_input, source_type="manual")
+        elif m_char_count > config.OCR_CONFIG["max_text_length"]:
             st.warning(f"Submitted text exceeds {config.OCR_CONFIG['max_text_length']:,} characters. It will be truncated safely.")
-            body_val = body_val[:config.OCR_CONFIG["max_text_length"]]
-            run_anyway = True
+            run_pipeline_analysis(m_headline_input, m_body_input[:config.OCR_CONFIG["max_text_length"]], source_type="manual")
         else:
-            run_anyway = True
+            run_pipeline_analysis(m_headline_input, m_body_input, source_type="manual")
 
-        if headline_val.strip() or body_val.strip():
-            with st.spinner("Analyzing linguistic patterns and generating LIME and SHAP explanations..."):
-                try:
-                    pipeline = load_inference_pipeline()
-                    pred_res = predict_news(headline_val, body_val, pipeline=pipeline)
-                    full_text = f"{headline_val}. {body_val}" if headline_val else body_val
+# =============================================================================
+# OPTION 2: IMAGE UPLOAD & TESSERACT OCR
+# =============================================================================
+with tab_ocr:
+    st.markdown("##### Upload a News Image / Screenshot")
+    st.caption("Upload a screenshot or photo containing a headline and article text. Text is extracted locally using Tesseract OCR for your review before analysis.")
 
-                    lime_exp = VeritasLimeExplainer(pipeline)
-                    lime_res = lime_exp.explain(full_text)
+    # Check Tesseract Availability
+    tess_avail, tess_info = is_tesseract_available()
+    if not tess_avail:
+        st.error(
+            "⚠️ **Tesseract OCR is not installed or not accessible.**\n\n"
+            "To enable image text extraction on macOS, install Tesseract via Homebrew:\n\n"
+            "```bash\n"
+            "brew install tesseract\n"
+            "```\n\n"
+            "Verify installation in your terminal:\n"
+            "```bash\n"
+            "tesseract --version\n"
+            "```\n\n"
+            "*You can still use Option 1 (Manual Text Entry) while Tesseract is being installed.*"
+        )
 
-                    shap_exp = VeritasShapExplainer(pipeline)
-                    shap_res = shap_exp.explain(full_text)
-
-                    st.session_state["active_analysis"] = {
-                        "source_type": "text",
-                        "headline": headline_val,
-                        "text": body_val,
-                        "prediction": pred_res,
-                        "lime": lime_res,
-                        "shap": shap_res,
-                    }
-                    st.session_state["record_saved"] = False
-                except Exception as e:
-                    st.error(f"Inference error: {str(e)}")
-
-# -----------------------------------------------------------------------------
-# TAB 2: IMAGE UPLOAD & OCR WORKSPACE
-# -----------------------------------------------------------------------------
-with tab_image:
-    st.markdown("##### Upload a News Screenshot or Photo")
-    st.markdown(
-        "<p style='color: #64748B; font-size: 0.88rem; margin-top: -6px;'>"
-        "Upload a news screenshot, clipping, or headline photograph. Text will be extracted locally via Tesseract OCR for your review before analysis."
-        "</p>",
-        unsafe_allow_html=True,
-    )
-
-    uploaded_file = st.file_uploader(
-        "Choose an image file",
+    uploaded_image = st.file_uploader(
+        "Choose an image file (PNG, JPG, JPEG, WEBP)",
         type=config.OCR_CONFIG["allowed_extensions"],
-        help="Supported formats: JPG, JPEG, PNG, WEBP (Max 10MB)",
-        label_visibility="collapsed",
+        help=f"Supported formats: PNG, JPG, JPEG, WEBP. Maximum file size: {config.OCR_CONFIG['max_file_size_mb']}MB.",
+        key="ocr_image_uploader",
     )
 
-    if uploaded_file is not None:
-        file_bytes = uploaded_file.getvalue()
-        is_valid, validation_err = validate_image_bytes(file_bytes, uploaded_file.name)
+    if uploaded_image is not None:
+        file_bytes = uploaded_image.getvalue()
+        is_valid_img, img_err = validate_image_bytes(file_bytes, uploaded_image.name)
 
-        if not is_valid:
-            st.error(validation_err)
+        if not is_valid_img:
+            st.error(img_err)
         else:
-            col_img_prev, col_ocr_res = st.columns([1, 1])
+            col_img_left, col_ocr_right = st.columns([1, 1.2])
 
-            with col_img_prev:
+            with col_img_left:
                 try:
-                    image_obj = Image.open(io.BytesIO(file_bytes))
-                    w, h = image_obj.size
-                    st.image(image_obj, caption=f"Uploaded Image: {uploaded_file.name} ({w}×{h} px)", use_container_width=True)
+                    pil_img = Image.open(io.BytesIO(file_bytes))
+                    w, h = pil_img.size
+                    st.image(
+                        pil_img,
+                        caption=f"Uploaded: {uploaded_image.name} ({w}×{h}px · {len(file_bytes)/1024:.1f} KB)",
+                        use_container_width=True,
+                    )
                 except Exception as e:
-                    st.error(f"Failed to display image: {e}")
+                    st.error(f"Could not render image preview: {e}")
 
-                if st.button("🔍 Extract Text via OCR", type="primary", use_container_width=True):
-                    with st.spinner("Processing image and performing Optical Character Recognition..."):
-                        ocr_result = extract_text_from_image(file_bytes, uploaded_file.name)
-                        if ocr_result["success"]:
-                            st.session_state["ocr_extracted_text"] = ocr_result["text"]
-                            # Infer first line as potential headline if short
-                            lines = [l.strip() for l in ocr_result["text"].splitlines() if l.strip()]
-                            if lines and len(lines[0]) < 120 and len(lines) > 1:
-                                st.session_state["ocr_headline"] = lines[0]
-                                st.session_state["ocr_extracted_text"] = "\n".join(lines[1:])
-                            st.success(f"Successfully extracted {ocr_result['word_count']} words.")
+                if st.button("🔍 Extract Text via Tesseract OCR", type="primary", use_container_width=True, disabled=not tess_avail):
+                    with st.spinner("Executing local Tesseract OCR & image preprocessing..."):
+                        ocr_res = extract_text_from_image(file_bytes, uploaded_image.name)
+                        if ocr_res["success"]:
+                            st.session_state["ocr_headline"] = ocr_res["headline"]
+                            st.session_state["ocr_body"] = ocr_res["body"]
+                            st.session_state["widget_ocr_head_val"] = ocr_res["headline"]
+                            st.session_state["widget_ocr_body_val"] = ocr_res["body"]
+                            st.session_state["ocr_raw_text"] = ocr_res["text"]
+                            st.success(f"Extracted {ocr_res['word_count']} words successfully! Review and edit the fields below before analyzing.")
                         else:
-                            st.error(ocr_result.get("error", "No readable text detected."))
+                            st.error(ocr_res.get("error", "No readable text detected."))
 
-            with col_ocr_res:
-                st.markdown("###### Review & Edit Extracted Text")
-                ocr_head_val = st.text_input(
-                    "Extracted Headline (Editable)",
-                    value=st.session_state["ocr_headline"],
-                    placeholder="Headline extracted from image...",
-                    key="widget_ocr_head",
+            with col_ocr_right:
+                st.markdown("###### Review & Edit Extracted Content")
+                st.caption("Verify and correct the extracted headline and article body before submitting for classification.")
+
+                ocr_h_val = st.text_input(
+                    "Extracted News Headline (Editable) *",
+                    placeholder="Extracted headline will appear here for review...",
+                    key="widget_ocr_head_val",
                 )
-                st.session_state["ocr_headline"] = ocr_head_val
 
-                ocr_body_val = st.text_area(
-                    "Extracted Article Body (Editable)",
-                    value=st.session_state["ocr_extracted_text"],
-                    placeholder="Article text extracted via OCR will appear here for verification...",
+                ocr_b_val = st.text_area(
+                    "Extracted Article Context / Text (Editable) *",
+                    placeholder="Extracted article body will appear here for verification...",
                     height=200,
-                    key="widget_ocr_body",
+                    key="widget_ocr_body_val",
                 )
-                st.session_state["ocr_extracted_text"] = ocr_body_val
 
-                ocr_words = len(f"{ocr_head_val} {ocr_body_val}".split()) if (ocr_head_val or ocr_body_val) else 0
-                st.caption(f"{ocr_words} words extracted")
+                # Separation helper
+                col_h1, col_h2 = st.columns(2)
+                with col_h1:
+                    if st.button("Merge All into Article Context", help="Put headline text into article body"):
+                        merged = f"{st.session_state['ocr_headline']}\n\n{st.session_state['ocr_body']}".strip()
+                        st.session_state["ocr_body"] = merged
+                        st.session_state["ocr_headline"] = ""
+                        st.session_state["widget_ocr_body_val"] = merged
+                        st.session_state["widget_ocr_head_val"] = ""
+                        st.rerun()
+                with col_h2:
+                    if st.button("Clear Extracted Text", help="Reset OCR fields"):
+                        st.session_state["ocr_headline"] = ""
+                        st.session_state["ocr_body"] = ""
+                        st.session_state["widget_ocr_head_val"] = ""
+                        st.session_state["widget_ocr_body_val"] = ""
+                        st.session_state["active_analysis"] = None
+                        st.rerun()
 
-                if st.button("Analyze Extracted Story", type="primary", use_container_width=True):
-                    if not ocr_head_val.strip() and not ocr_body_val.strip():
+                ocr_tot_words = len(f"{ocr_h_val} {ocr_b_val}".split()) if (ocr_h_val or ocr_b_val) else 0
+                st.caption(f"{ocr_tot_words} words ready for analysis")
+
+                if st.button("Analyze News Story", type="primary", use_container_width=True, key="btn_ocr_analyze"):
+                    has_oh = bool(ocr_h_val.strip())
+                    has_ob = bool(ocr_b_val.strip())
+
+                    if not has_oh and not has_ob:
                         st.error("No text available for analysis. Please extract text from an image or enter text manually.")
+                    elif not has_oh:
+                        st.error("News Headline is required. Please enter or confirm the headline before analyzing.")
+                    elif not has_ob:
+                        st.error("News Context / Article Text is required. Please provide the article body.")
+                    elif ocr_tot_words < 5:
+                        st.warning("Extracted text is very short (under 5 words). Short snippets may yield low-confidence predictions.")
+                        run_pipeline_analysis(ocr_h_val, ocr_b_val, source_type="ocr_image")
                     else:
-                        with st.spinner("Analyzing extracted text and computing explanations..."):
-                            try:
-                                pipeline = load_inference_pipeline()
-                                pred_res = predict_news(ocr_head_val, ocr_body_val, pipeline=pipeline)
-                                full_text = f"{ocr_head_val}. {ocr_body_val}" if ocr_head_val else ocr_body_val
+                        run_pipeline_analysis(ocr_h_val, ocr_b_val, source_type="ocr_image")
 
-                                lime_exp = VeritasLimeExplainer(pipeline)
-                                lime_res = lime_exp.explain(full_text)
-
-                                shap_exp = VeritasShapExplainer(pipeline)
-                                shap_res = shap_exp.explain(full_text)
-
-                                st.session_state["active_analysis"] = {
-                                    "source_type": "image",
-                                    "headline": ocr_head_val,
-                                    "text": ocr_body_val,
-                                    "prediction": pred_res,
-                                    "lime": lime_res,
-                                    "shap": shap_res,
-                                }
-                                st.session_state["record_saved"] = False
-                            except Exception as e:
-                                st.error(f"Inference error: {str(e)}")
-
-# -----------------------------------------------------------------------------
-# UNIFIED ANALYSIS FINDINGS VIEW
-# -----------------------------------------------------------------------------
+# =============================================================================
+# UNIFIED CLASSIFICATION RESULTS & EXPLAINABILITY VIEW
+# =============================================================================
 if st.session_state["active_analysis"]:
     res = st.session_state["active_analysis"]
     pred = res["prediction"]
@@ -279,41 +331,81 @@ if st.session_state["active_analysis"]:
     accent_bar = config.COLOR_THEME["fake"] if is_fake else config.COLOR_THEME["real"]
 
     st.write("")
-    st.markdown("### Analysis Findings")
+    st.markdown("---")
+    st.markdown("### Analysis Findings & Explanations")
 
-    # Classification Banner Card
+    # Submitted Story Overview Card
     st.markdown(
         f"""
         <div class="veritas-card" style="border-left: 4px solid {accent_bar};">
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+            <div style="font-size: 0.8rem; text-transform: uppercase; color: #64748B; font-weight: 600; letter-spacing: 0.04em;">
+                Submitted News Headline
+            </div>
+            <div style="font-size: 1.25rem; font-weight: 700; color: #0F172A; margin: 4px 0 10px 0;">
+                {res['headline']}
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-top: 14px; border-top: 1px solid #E2E8F0; padding-top: 14px;">
                 <div>
-                    <span style="font-size: 0.82rem; color: #64748B; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Model Assessment</span>
+                    <span style="font-size: 0.8rem; color: #64748B; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Classification Assessment</span>
                     <div style="margin-top: 4px;">
                         <span class="{badge_style}">{pred['prediction']}</span>
                     </div>
                 </div>
                 <div>
-                    <span style="font-size: 0.82rem; color: #64748B; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Classification Confidence</span>
+                    <span style="font-size: 0.8rem; color: #64748B; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Calibrated Model Confidence</span>
                     <div style="font-size: 1.85rem; font-weight: 700; color: {score_color}; line-height: 1.2;">
                         {pred['confidence']*100:.1f}%
                     </div>
                 </div>
                 <div>
-                    <span style="font-size: 0.82rem; color: #64748B; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Model Architecture</span>
+                    <span style="font-size: 0.8rem; color: #64748B; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Active Model</span>
                     <div style="font-size: 1.05rem; font-weight: 600; color: #0F172A; margin-top: 4px;">
                         {pred['model_name']}
                     </div>
                 </div>
+                <div>
+                    <span style="font-size: 0.8rem; color: #64748B; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Input Source</span>
+                    <div style="font-size: 0.95rem; font-weight: 500; color: #334155; margin-top: 4px;">
+                        {'Direct Manual Input' if res['source_type'] == 'manual' else 'Extracted Image OCR'}
+                    </div>
+                </div>
             </div>
-            <div style="margin-top: 14px; border-top: 1px solid #E2E8F0; padding-top: 10px; display: flex; gap: 20px; font-size: 0.85rem; color: #64748B;">
-                <span>Probability Breakdown:</span>
-                <span style="color: {config.COLOR_THEME['real']}; font-weight: 500;">Likely Real: {pred['probabilities']['Likely Real']*100:.1f}%</span>
-                <span style="color: {config.COLOR_THEME['fake']}; font-weight: 500;">Likely Fake: {pred['probabilities']['Likely Fake']*100:.1f}%</span>
+            <div style="margin-top: 12px; font-size: 0.84rem; color: #64748B;">
+                Probability Distribution:
+                <strong style="color: {config.COLOR_THEME['real']}; margin-left: 6px;">Likely Real: {pred['probabilities']['Likely Real']*100:.1f}%</strong> |
+                <strong style="color: {config.COLOR_THEME['fake']}; margin-left: 6px;">Likely Fake: {pred['probabilities']['Likely Fake']*100:.1f}%</strong>
             </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
+
+    # Article Context (Collapsible if long)
+    if res["text"]:
+        if len(res["text"]) > 350:
+            with st.expander("📖 View Submitted Article Context (Full Text)"):
+                st.markdown(
+                    f"""
+                    <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; padding: 14px; font-size: 0.92rem; line-height: 1.6; color: #334155;">
+                        {res['text']}
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+        else:
+            st.markdown(
+                f"""
+                <div class="veritas-card" style="padding: 16px 20px;">
+                    <div style="font-size: 0.8rem; text-transform: uppercase; color: #64748B; font-weight: 600; margin-bottom: 6px;">
+                        Article Context
+                    </div>
+                    <p style="color: #334155; font-size: 0.92rem; line-height: 1.6; margin: 0;">
+                        {res['text']}
+                    </p>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
 
     # Stylometric Profile
     stats = pred.get("linguistic_stats", {})
@@ -370,19 +462,19 @@ if st.session_state["active_analysis"]:
                 Attributed Token Highlights
             </div>
             <p style="color: #64748B; font-size: 0.85rem; margin-bottom: 12px;">
-                Words contributing toward <strong style="color: {config.COLOR_THEME['fake']};">Likely Fake</strong> are highlighted in coral;
-                words contributing toward <strong style="color: {config.COLOR_THEME['real']};">Likely Real</strong> are highlighted in sage green.
+                Words contributing toward <strong style="color: {config.COLOR_THEME['fake']};">Likely Fake</strong> are highlighted in soft coral;
+                words contributing toward <strong style="color: {config.COLOR_THEME['real']};">Likely Real</strong> are highlighted in soft sage green.
             </p>
             <div style="background: #F8FAFC; border: 1px solid #E2E8F0; padding: 16px; border-radius: 6px; font-size: 0.95rem; line-height: 1.8; color: #1E293B;">
-                {highlight_tokens_html(f"{res['headline']}. {res['text']}" if res['headline'] else res['text'], shap.get('top_features', []))}
+                {highlight_tokens_html(res['unified_doc'], shap.get('top_features', []))}
             </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    # Side-by-side LIME and SHAP
-    st.markdown("##### Explainable AI Attributions")
+    # Side-by-side LIME and SHAP Explainers
+    st.markdown("##### Explainable AI Token Attributions")
     xai_col1, xai_col2 = st.columns(2)
 
     with xai_col1:
@@ -432,14 +524,14 @@ if st.session_state["active_analysis"]:
         st.markdown(
             """
             <p style="color: #64748B; font-size: 0.85rem; margin-bottom: 12px;">
-                Retrieves semantically aligned passages from our local, verified journalistic and fact-check archive.
-                <br><em>Note: Text similarity provides context; it does not constitute definitive proof of truth.</em>
+                Retrieves semantically aligned passages from our local journalistic and fact-check archive.
+                <br><em>Note: Semantic text similarity provides context; it does not constitute definitive proof of truth.</em>
             </p>
             """,
             unsafe_allow_html=True,
         )
         retriever = LocalEvidenceRetriever()
-        retrieved_passages = retriever.retrieve(f"{res['headline']} {res['text']}", top_k=2)
+        retrieved_passages = retriever.retrieve(res["unified_doc"], top_k=2)
 
         if retrieved_passages:
             for p in retrieved_passages:
@@ -468,10 +560,10 @@ if st.session_state["active_analysis"]:
     st.write("")
     save_col1, save_col2 = st.columns([3, 1])
     with save_col1:
-        st.caption("Store this record in the local SQLite database for historical compliance and audit logging.")
+        st.caption("Store this record in the local SQLite database for compliance auditing (auto-retained for 3 calendar months).")
     with save_col2:
         if not st.session_state["record_saved"]:
-            if st.button("Save Analysis to History", use_container_width=True):
+            if st.button("Save Analysis to History", use_container_width=True, key="btn_save_analysis"):
                 top_feats = shap.get("top_features", [])[:5]
                 save_analysis(
                     headline=res["headline"],
@@ -486,7 +578,7 @@ if st.session_state["active_analysis"]:
                 st.success("Analysis saved to local SQLite history!")
                 st.rerun()
         else:
-            st.button("✓ Record Saved", disabled=True, use_container_width=True)
+            st.button("✓ Record Saved", disabled=True, use_container_width=True, key="btn_saved_disabled")
 
     # Epistemic notice at bottom of results
     st.write("")

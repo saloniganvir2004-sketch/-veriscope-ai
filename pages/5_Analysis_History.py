@@ -2,6 +2,7 @@
 VeriScope AI - Page 5: Analysis History Audit Log
 Local SQLite persistent storage for auditing user-submitted analyses,
 filtering by class, inspecting token contributions, and exporting records.
+Enforces an automatic 3-calendar-month retention policy using UTC timestamps.
 """
 
 import streamlit as st
@@ -15,6 +16,8 @@ from src.database import (
     delete_analysis,
     clear_history,
     get_history_stats,
+    delete_expired_history,
+    get_retention_info,
 )
 
 st.set_page_config(page_title="Audit History | VeriScope AI", page_icon="🗄️", layout="wide")
@@ -23,6 +26,19 @@ load_custom_css()
 render_brand_header(
     title="Analysis Audit History & Records",
     subtitle="Query, filter, inspect, and export persistent records stored locally in SQLite.",
+)
+
+# Retention Policy Notice Bar
+ret_info = get_retention_info(months=3)
+st.markdown(
+    f"""
+    <div style="background: #F1F5F9; border: 1px solid #CBD5E1; border-radius: 6px; padding: 10px 16px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+        <div style="font-size: 0.86rem; color: #334155;">
+            <strong>Retention Policy:</strong> Records are retained for <strong>3 calendar months</strong> (UTC) and automatically purged on startup and save. Current cutoff: <code style="color: #0E7490;">{ret_info['cutoff_timestamp']}</code>.
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
 )
 
 # Controls Row: Search & Filters
@@ -65,7 +81,7 @@ if records:
         badge_class = "badge-fake" if is_fake else "badge-real"
         card_border = config.COLOR_THEME["fake"] if is_fake else config.COLOR_THEME["real"]
 
-        with st.expander(f"[{r['timestamp']}] {r['headline']} — {r['prediction']} ({r['confidence']*100:.1f}%)"):
+        with st.expander(f"[{r['timestamp']} UTC] {r['headline']} — {r['prediction']} ({r['confidence']*100:.1f}%)"):
             st.markdown(
                 f"""
                 <div style="border-left: 3px solid {card_border}; padding-left: 12px; margin-bottom: 12px;">
@@ -114,7 +130,7 @@ if records:
     # Export & Bulk Actions
     st.write("")
     st.markdown("---")
-    act_col1, act_col2 = st.columns([2, 1])
+    act_col1, act_col2, act_col3 = st.columns([1.5, 1.2, 1.3])
 
     with act_col1:
         # Export to CSV
@@ -128,9 +144,18 @@ if records:
         )
 
     with act_col2:
-        confirm_clear = st.checkbox("Confirm Purge All History Records", key="chk_purge")
+        if st.button("🧹 Run 3-Month Retention Cleanup"):
+            purged = delete_expired_history(months=3)
+            if purged > 0:
+                st.success(f"Purged {purged} record(s) older than 3 calendar months.")
+            else:
+                st.info("No expired records found (all records are within 3 calendar months).")
+            st.rerun()
+
+    with act_col3:
+        confirm_clear = st.checkbox("Confirm Purge All History", key="chk_purge")
         if confirm_clear:
-            if st.button("🚨 Clear Entire Database History", type="secondary"):
+            if st.button("🚨 Clear Entire History", type="secondary"):
                 cleared_count = clear_history()
                 st.warning(f"Cleared {cleared_count} records from database.")
                 st.rerun()

@@ -77,7 +77,7 @@ for m_name, test_metrics in model_comparison.get("test_evaluations", {}).items()
     })
 
 df_metrics = pd.DataFrame(table_rows)
-st.dataframe(df_metrics, hide_index=True, use_container_width=True)
+st.dataframe(df_metrics, hide_index=True, width="stretch")
 
 # Comparative Bar Chart
 models = list(model_comparison.get("test_evaluations", {}).keys())
@@ -155,7 +155,7 @@ with diag_col2:
                     "F1-Score": f"{cr[cls_name]['f1-score']:.4f}",
                     "Support": cr[cls_name]["support"],
                 })
-        st.dataframe(pd.DataFrame(class_rows), hide_index=True, use_container_width=True)
+        st.dataframe(pd.DataFrame(class_rows), hide_index=True, width="stretch")
     st.markdown("</div>", unsafe_allow_html=True)
 
 # Methodology & Calibration Notes

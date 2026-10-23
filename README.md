@@ -3,22 +3,34 @@
 > **Tagline:** *Intelligence Beyond the Headline.*
 
 [![Python Version](https://img.shields.io/badge/Python-3.12-blue.svg)](https://python.org)
-[![Testing](https://img.shields.io/badge/Pytest-23%20Passed-emerald.svg)](tests/)
+[![Testing](https://img.shields.io/badge/Pytest-35%20Passed-emerald.svg)](tests/)
 [![Architecture](https://img.shields.io/badge/Models-LR%20%7C%20MNB%20%7C%20Linear%20SVM-cyan.svg)](src/)
 [![XAI Engines](https://img.shields.io/badge/Explainability-LIME%20%26%20SHAP-purple.svg)](src/)
 [![OCR Engine](https://img.shields.io/badge/OCR-Tesseract%205.5-orange.svg)](src/ocr.py)
 
-**VeriScope AI** is a research-grade, locally runnable Machine Learning and Explainable Artificial Intelligence (XAI) platform. The application classifies news articles supplied as **direct text or image screenshots** as *Likely Fake* or *Likely Real*, and opens the algorithmic "black box" by rendering simultaneous local explanations via **LIME** and **SHAP**.
+**VeriScope AI** is a research-grade, locally runnable Machine Learning and Explainable Artificial Intelligence (XAI) platform. The application classifies news articles supplied via **direct text entry or image screenshots** as *Likely Fake* or *Likely Real*, and opens the algorithmic "black box" by rendering simultaneous local explanations via **LIME** and **SHAP**.
 
 Beyond basic classification, VeriScope AI systematically evaluates explanation quality, feature agreement, perturbation stability, and causal faithfulness, presented through a refined editorial intelligence user interface.
 
 ---
 
+## MSc Project Team & Work Allocations
+
+| Member # | Name | Enrolment No. | Assigned Responsibility |
+|:---:|:---|:---|:---|
+| **Member 1** | **Ayushman Kumar** | `A010175625019` | Dataset and NLP Preprocessing |
+| **Member 2** | **Astha Thapa** | `A010175625014` | Machine-Learning Models and Tuning |
+| **Member 3** | **Saloni Ganvir** | `A010175625017` | Explainable AI and Interpretation |
+| **Member 4** | **Sarvesh** | `A010175625016` | Web Application and OCR Integration |
+| **Member 5** | **Sri Rinith** | `A010175625018` | Evaluation, Testing and Integration |
+
+---
+
 ## Key Features & Capabilities
 
-1. **Dual Input Modalities (Text & Screenshot OCR):**
-   - **Direct Text Input:** Headline and full article body with word/character counters, demonstration samples, and input preservation.
-   - **Image OCR (Tesseract + PIL):** Upload news screenshots or photos (JPG, PNG, WEBP). Automatically performs EXIF orientation transpose, resolution normalization, high-contrast grayscale filtering, and edge sharpening. Extracted text is presented in an editable window for review before classification.
+1. **Dual Input Modalities (Strictly Two Separate Workflows):**
+   - **Option 1 — Manual Text Entry:** Separate inputs for News Headline and News Context / Article Text with character/word counters, demonstration samples, required-field validation, and session-state preservation.
+   - **Option 2 — Image OCR (Tesseract + Pillow):** Upload news screenshots or photos (PNG, JPG, JPEG, WEBP). Automatically performs EXIF orientation transpose, rotation correction (OSD), resolution normalization, high-contrast grayscale filtering, and edge sharpening. Extracted text is separated into candidate headline and context, editable before analysis.
 2. **Dual Explainable AI Engines:**
    - **LIME:** Local surrogate ridge regression fitted over Monte Carlo text perturbations.
    - **SHAP:** Game-theoretic Shapley feature attributions computed in $<100\text{ ms}$ via optimized linear log-odds decomposition.
@@ -32,66 +44,10 @@ Beyond basic classification, VeriScope AI systematically evaluates explanation q
 5. **Calibrated Machine Learning Pipeline:**
    - Evaluates **Logistic Regression**, **Multinomial Naive Bayes**, and **Linear Support Vector Machine**.
    - Applies **Platt Scaling** (`CalibratedClassifierCV`) to Linear SVM to produce mathematically bounded confidence probabilities rather than raw uncalibrated geometric margins.
-6. **Contextual Evidence Retrieval (Local Reference Corpus):**
-   - Offline cosine similarity passage retrieval matching submitted claims against verified reference dispatches and fact-check archives.
-7. **Persistent SQLite Audit Database:**
-   - Audits past investigations with real-time KPI counters, keyword search, class filtering, and CSV export.
-8. **Refined Editorial Intelligence UI/UX:**
+6. **Automatic 3-Calendar-Month Retention Policy:**
+   - Persistent SQLite audit history automatically purges records older than 3 calendar months (UTC), correctly accounting for leap years, varying month lengths, and month-end dates.
+7. **Refined Editorial Intelligence UI/UX:**
    - Warm off-white reading surfaces (`#F8F9FA`), deep midnight ink typography (`#0F172A`), muted teal accents, restrained sage/coral status badges, and local vector illustrations.
-
----
-
-## Project Structure
-
-```
-veritas-ai/
-├── app.py                      # Main entrypoint & editorial portal
-├── config.py                   # Central configuration & parameters
-├── requirements.txt            # Pinned dependencies for Python 3.12
-├── pytest.ini                  # Pytest configuration
-├── README.md                   # Complete documentation & replication guide
-├── .gitignore                  # Git exclusions
-├── assets/
-│   ├── hero_editorial.svg      # Vector illustration for dashboard hero
-│   └── empty_audit.svg         # Clean line-art illustration for empty states
-├── pages/
-│   ├── 1_Dashboard.py          # Hero, key KPIs & recent audit log
-│   ├── 2_News_Analyzer.py      # Dual input workspace (Text & Image OCR), LIME/SHAP
-│   ├── 3_Explainable_AI_Lab.py # Side-by-side XAI comparison & stability tests
-│   ├── 4_Model_Performance.py  # Model comparison, calibration & confusion matrices
-│   ├── 5_Analysis_History.py   # SQLite-backed persistent audit log & CSV export
-│   └── 6_About.py              # Methodology, mathematical formulas & MSc Viva preparation
-├── src/
-│   ├── ocr.py                  # Image decoding, preprocessing & Tesseract OCR
-│   ├── data_loader.py          # Dataset acquisition, validation & splitting
-│   ├── preprocessing.py        # Leakage removal, text normalization & TF-IDF
-│   ├── train.py                # Multi-model training, calibration & artifact export
-│   ├── evaluate.py             # Evaluation metrics & confusion matrix generators
-│   ├── predict.py              # Unified inference engine with confidence scoring
-│   ├── lime_explainer.py       # Independent LIME module
-│   ├── shap_explainer.py       # Independent SHAP LinearExplainer module
-│   ├── explanation_evaluation.py # XAI research suite (Jaccard, stability, fidelity)
-│   ├── evidence_retriever.py   # Local offline reference passage retriever
-│   ├── database.py             # SQLite CRUD operations
-│   └── utils.py                # Editorial CSS, Plotly charts & token highlighter
-├── data/
-│   ├── raw/                    # Raw source CSVs
-│   └── processed/              # Stratified train, val, test splits
-├── artifacts/
-│   ├── models/                 # Fitted pipeline (best_pipeline.joblib) & candidates
-│   ├── metrics/                # model_comparison.json, confusion_matrices.json
-│   ├── xai_experiments/        # Precomputed empirical research study results
-│   └── veritas_history.db      # SQLite persistent storage
-├── tests/
-│   ├── test_ocr.py             # OCR decoding & synthetic image tests
-│   ├── test_preprocessing.py   # Preprocessing & leakage tests
-│   ├── test_prediction.py      # Inference & confidence bounds tests
-│   ├── test_explanations.py    # LIME/SHAP structure & agreement tests
-│   ├── test_evidence.py        # Local evidence retrieval tests
-│   └── test_database.py        # SQLite storage & deletion tests
-└── reports/
-    └── model_evaluation_report.md # Academic evaluation report
-```
 
 ---
 
@@ -104,11 +60,15 @@ veritas-ai/
   ```bash
   brew install tesseract
   ```
-  *(Already installed on macOS at `/opt/homebrew/bin/tesseract`)*
+  Verify installation:
+  ```bash
+  tesseract --version
+  ```
+  *(Detected automatically on macOS at `/opt/homebrew/bin/tesseract` or system PATH)*
 
 ### 2. Environment Activation & Dependencies
 ```bash
-cd /Users/saloniganvir/.gemini/antigravity/scratch/veritas-ai
+cd /Users/saloniganvir/Desktop/veritas-ai
 source venv/bin/activate
 pip install -r requirements.txt
 ```
@@ -118,7 +78,7 @@ Run the complete unit and integration test suite:
 ```bash
 pytest
 ```
-*All 23 automated tests validate OCR image extraction, leakage sanitization, inference, LIME, SHAP, and SQLite persistence.*
+*All 35 automated tests validate OCR image extraction, leakage sanitization, inference, LIME, SHAP, SQLite retention, and Streamlit UI page workflows.*
 
 ### 4. Launching the Web Application
 Start the Streamlit application:

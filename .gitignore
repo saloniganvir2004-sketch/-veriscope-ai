@@ -42,6 +42,9 @@ htmlcov/
 *.sqlite3
 *.log
 
+# Streamlit local user credentials
+.streamlit/credentials.toml
+
 # Project Generated Artifacts & Large Datasets
 # Note: Keep directory structure with .gitkeep
 data/raw/*

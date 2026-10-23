@@ -215,10 +215,26 @@ def render_epistemic_disclaimer():
 
 
 def render_svg_asset(svg_path: Path, width: str = "100%"):
-    """Safely renders a local SVG vector illustration."""
+    """Safely renders a local SVG vector illustration with graceful fallback."""
     if svg_path.exists():
-        svg_content = svg_path.read_text(encoding="utf-8")
-        st.markdown(f'<div style="width: {width}; margin: 8px 0;">{svg_content}</div>', unsafe_allow_html=True)
+        try:
+            svg_content = svg_path.read_text(encoding="utf-8")
+            st.markdown(f'<div style="width: {width}; margin: 8px 0;">{svg_content}</div>', unsafe_allow_html=True)
+            return
+        except Exception:
+            pass
+
+    # Graceful editorial fallback card if asset is missing or unreadable
+    st.markdown(
+        f"""
+        <div style="width: {width}; background: #F8FAFC; border: 1px dashed #CBD5E1; border-radius: 8px; padding: 24px; text-align: center; margin: 8px 0;">
+            <span style="font-size: 2rem;">📰</span>
+            <div style="font-weight: 600; color: #0F172A; font-size: 0.95rem; margin-top: 4px;">Editorial Intelligence Preview</div>
+            <div style="font-size: 0.82rem; color: #64748B; margin-top: 2px;">{svg_path.name if isinstance(svg_path, Path) else 'Asset'}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def build_horizontal_bar_chart(

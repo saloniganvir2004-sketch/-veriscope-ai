@@ -7,6 +7,7 @@ using local Tesseract OCR and Pillow image preprocessing.
 import io
 import re
 import os
+import shutil
 import logging
 from typing import Dict, Any, Optional, Union, Tuple
 from PIL import Image, ImageOps, ImageEnhance, ImageFilter
@@ -16,9 +17,50 @@ import config
 
 logger = logging.getLogger("VeriScopeOCR")
 
-# Configure tesseract executable location if available
-if os.path.exists(config.OCR_CONFIG.get("tesseract_cmd", "")):
-    pytesseract.pytesseract.tesseract_cmd = config.OCR_CONFIG["tesseract_cmd"]
+
+def _find_tesseract_cmd() -> Optional[str]:
+    """Discovers Tesseract binary across standard environment locations."""
+    configured = config.OCR_CONFIG.get("tesseract_cmd", "")
+    if configured and os.path.exists(configured):
+        return configured
+
+    which_path = shutil.which("tesseract")
+    if which_path and os.path.exists(which_path):
+        return which_path
+
+    common_paths = [
+        "/opt/homebrew/bin/tesseract",
+        "/usr/local/bin/tesseract",
+        "/usr/bin/tesseract",
+    ]
+    for p in common_paths:
+        if os.path.exists(p):
+            return p
+    return None
+
+
+_FOUND_TESSERACT = _find_tesseract_cmd()
+if _FOUND_TESSERACT:
+    pytesseract.pytesseract.tesseract_cmd = _FOUND_TESSERACT
+
+
+def is_tesseract_available() -> Tuple[bool, str]:
+    """
+    Verifies that the Tesseract executable is installed and reachable by pytesseract.
+    Returns (True, version_string) or (False, troubleshooting_instructions).
+    """
+    try:
+        ver = pytesseract.get_tesseract_version()
+        return True, f"Tesseract v{ver}"
+    except Exception as e:
+        return (
+            False,
+            "Tesseract OCR is not installed or not accessible on this system.\n\n"
+            "On macOS, please install via Homebrew:\n"
+            "    brew install tesseract\n\n"
+            "Verify installation in terminal:\n"
+            "    tesseract --version",
+        )
 
 
 def validate_image_bytes(file_bytes: bytes, filename: str = "") -> Tuple[bool, Optional[str]]:
@@ -50,8 +92,9 @@ def preprocess_image_for_ocr(img: Image.Image) -> Image.Image:
     1. Transposes EXIF orientation tags (e.g. photos taken sideways).
     2. Flattens transparency (RGBA/LA) onto a clean white background.
     3. Normalizes resolution (upscales small screenshot text, downscales massive images).
-    4. Converts to high-contrast grayscale.
-    5. Sharpens character edges.
+    4. Detects and corrects 90/180/270 degree rotation if OSD is available.
+    5. Converts to high-contrast grayscale.
+    6. Sharpens character edges.
     """
     # 1. Handle EXIF orientation
     try:
@@ -70,7 +113,6 @@ def preprocess_image_for_ocr(img: Image.Image) -> Image.Image:
     width, height = img.size
 
     # 3. Dynamic resizing for optimal OCR character height
-    # Small text benefits from upscaling with high-quality resampling
     if width < 1200 and height < 1200:
         scale_factor = 1.6
         img = img.resize((int(width * scale_factor), int(height * scale_factor)), Image.Resampling.LANCZOS)
@@ -79,14 +121,26 @@ def preprocess_image_for_ocr(img: Image.Image) -> Image.Image:
         scale = max_dim / max(width, height)
         img = img.resize((int(width * scale), int(height * scale)), Image.Resampling.LANCZOS)
 
-    # 4. Convert to Grayscale
+    # 4. Attempt orientation detection & rotation correction (OSD)
+    try:
+        osd = pytesseract.image_to_osd(img)
+        rot_match = re.search(r"Rotate:\s*(\d+)", osd)
+        if rot_match:
+            angle = int(rot_match.group(1))
+            if angle in (90, 180, 270):
+                img = img.rotate(360 - angle, expand=True)
+    except Exception:
+        # Graceful fallback: sparse or unconventional layout may skip OSD safely
+        pass
+
+    # 5. Convert to Grayscale
     gray = img.convert("L")
 
-    # 5. Contrast Enhancement
+    # 6. Contrast Enhancement
     enhancer = ImageEnhance.Contrast(gray)
     enhanced = enhancer.enhance(1.8)
 
-    # 6. Gentle edge sharpening to clarify small fonts
+    # 7. Gentle edge sharpening to clarify small fonts
     sharpened = enhanced.filter(ImageFilter.SHARPEN)
 
     return sharpened
@@ -119,6 +173,46 @@ def clean_ocr_text(raw_text: str) -> str:
     return text
 
 
+def separate_headline_and_body(text: str) -> Tuple[str, str]:
+    """
+    Intelligently splits extracted text into a candidate headline and article body:
+    1. If separated by double newlines, uses the first block as headline if <= 200 chars.
+    2. Otherwise uses the first line if it's reasonably concise (<= 160 chars).
+    3. Handles single-paragraph blocks gracefully.
+    Always returns (headline, body) strings.
+    """
+    cleaned = (text or "").strip()
+    if not cleaned:
+        return "", ""
+
+    # Check for paragraph boundary
+    if "\n\n" in cleaned:
+        parts = cleaned.split("\n\n", 1)
+        first_part = parts[0].replace("\n", " ").strip()
+        rest = parts[1].strip()
+        if len(first_part) <= 220:
+            return first_part, rest
+
+    # Check line-by-line
+    lines = [l.strip() for l in cleaned.splitlines() if l.strip()]
+    if len(lines) > 1:
+        first_line = lines[0]
+        if len(first_line) <= 180:
+            return first_line, "\n".join(lines[1:]).strip()
+
+    # Single block / single line
+    if len(cleaned) <= 140:
+        return cleaned, ""
+
+    # Long single block: split at first sentence boundary if appropriate
+    sentence_match = re.search(r"^([^\.\?\!\n]{10,140}[\.\?\!])\s+(.*)$", cleaned, flags=re.DOTALL)
+    if sentence_match:
+        return sentence_match.group(1).strip(), sentence_match.group(2).strip()
+
+    # Fallback: leave headline empty so user explicitly labels, or put first 100 chars
+    return "", cleaned
+
+
 def extract_text_from_image(
     image_input: Union[bytes, io.BytesIO, Image.Image],
     filename: str = "",
@@ -126,32 +220,73 @@ def extract_text_from_image(
     """
     Full OCR pipeline:
     Validates, decodes, preprocesses, and executes OCR via local Tesseract.
-    Returns structured results.
+    Returns structured results including separated candidate headline and body.
     """
-    # Load Image
+    # 0. Check Tesseract availability
+    tess_available, tess_msg = is_tesseract_available()
+    if not tess_available:
+        return {
+            "success": False,
+            "text": "",
+            "headline": "",
+            "body": "",
+            "word_count": 0,
+            "char_count": 0,
+            "dimensions": (0, 0),
+            "error": tess_msg,
+        }
+
+    # 1. Load Image
     try:
         if isinstance(image_input, bytes):
             is_valid, err = validate_image_bytes(image_input, filename)
             if not is_valid:
-                return {"success": False, "text": "", "error": err}
+                return {
+                    "success": False,
+                    "text": "",
+                    "headline": "",
+                    "body": "",
+                    "word_count": 0,
+                    "char_count": 0,
+                    "dimensions": (0, 0),
+                    "error": err,
+                }
             img = Image.open(io.BytesIO(image_input))
         elif isinstance(image_input, io.BytesIO):
             img_bytes = image_input.getvalue()
             is_valid, err = validate_image_bytes(img_bytes, filename)
             if not is_valid:
-                return {"success": False, "text": "", "error": err}
+                return {
+                    "success": False,
+                    "text": "",
+                    "headline": "",
+                    "body": "",
+                    "word_count": 0,
+                    "char_count": 0,
+                    "dimensions": (0, 0),
+                    "error": err,
+                }
             img = Image.open(image_input)
         elif isinstance(image_input, Image.Image):
             img = image_input
         else:
-            return {"success": False, "text": "", "error": "Unsupported image input type."}
+            return {
+                "success": False,
+                "text": "",
+                "headline": "",
+                "body": "",
+                "word_count": 0,
+                "char_count": 0,
+                "dimensions": (0, 0),
+                "error": "Unsupported image input type.",
+            }
 
         orig_w, orig_h = img.size
 
-        # Preprocess
+        # 2. Preprocess
         processed_img = preprocess_image_for_ocr(img)
 
-        # Run OCR with Tesseract
+        # 3. Run OCR with Tesseract
         custom_config = r"--oem 3 --psm 6"  # Assume a uniform block of text
         try:
             raw_text = pytesseract.image_to_string(processed_img, config=custom_config)
@@ -169,6 +304,8 @@ def extract_text_from_image(
             return {
                 "success": False,
                 "text": "",
+                "headline": "",
+                "body": "",
                 "raw_text": raw_text,
                 "word_count": word_count,
                 "char_count": char_count,
@@ -176,9 +313,13 @@ def extract_text_from_image(
                 "error": "No readable text detected in the uploaded image. Please ensure the image contains clear, legible text.",
             }
 
+        headline, body = separate_headline_and_body(cleaned_text)
+
         return {
             "success": True,
             "text": cleaned_text,
+            "headline": headline,
+            "body": body,
             "raw_text": raw_text,
             "word_count": word_count,
             "char_count": char_count,
@@ -191,5 +332,10 @@ def extract_text_from_image(
         return {
             "success": False,
             "text": "",
+            "headline": "",
+            "body": "",
+            "word_count": 0,
+            "char_count": 0,
+            "dimensions": (0, 0),
             "error": f"OCR processing failed: {str(e)}",
         }

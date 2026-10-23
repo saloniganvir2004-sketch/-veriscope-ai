@@ -1,13 +1,15 @@
 """
-VERITAS AI - SQLite Local Database Layer
+VeriScope AI - SQLite Local Database Layer
 Provides persistent storage, querying, filtering, statistics, and safe deletion
 for user news analyses without storing sensitive or bloated payloads.
+Enforces an automatic 3-calendar-month retention policy using UTC timestamps.
 """
 
 import sqlite3
 import json
 import hashlib
-from datetime import datetime
+from datetime import datetime, timezone
+from dateutil.relativedelta import relativedelta
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 
@@ -22,8 +24,49 @@ def get_db_connection(db_path: Path = config.DB_PATH) -> sqlite3.Connection:
     return conn
 
 
-def init_db(db_path: Path = config.DB_PATH) -> None:
-    """Initializes the database schema with appropriate indexes."""
+def calculate_cutoff_date(months: int = 3, reference_date: Optional[datetime] = None) -> str:
+    """
+    Computes the exact UTC cutoff timestamp 3 calendar months prior to reference_date.
+    Properly handles leap years, varying month lengths, and month-end dates.
+    Returns formatted timestamp string 'YYYY-MM-DD HH:MM:SS'.
+    """
+    if reference_date is None:
+        ref = datetime.now(timezone.utc)
+    else:
+        if reference_date.tzinfo is None:
+            ref = reference_date.replace(tzinfo=timezone.utc)
+        else:
+            ref = reference_date.astimezone(timezone.utc)
+
+    cutoff = ref - relativedelta(months=months)
+    return cutoff.strftime("%Y-%m-%d %H:%M:%S")
+
+
+def delete_expired_history(
+    months: int = 3,
+    db_path: Path = config.DB_PATH,
+    reference_date: Optional[datetime] = None,
+) -> int:
+    """
+    Deletes records older than specified calendar months (default 3) from analysis_history.
+    Preserves all datasets, models, metrics, and non-expired records.
+    Returns count of deleted expired records.
+    """
+    cutoff_str = calculate_cutoff_date(months=months, reference_date=reference_date)
+
+    with get_db_connection(db_path) as conn:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM analysis_history WHERE timestamp < ?", (cutoff_str,))
+        deleted_count = cursor.rowcount
+        conn.commit()
+    return deleted_count
+
+
+def init_db(db_path: Path = config.DB_PATH, auto_cleanup: bool = True) -> None:
+    """
+    Initializes the database schema with appropriate indexes and
+    synchronously cleans up records exceeding the 3-calendar-month retention window.
+    """
     with get_db_connection(db_path) as conn:
         cursor = conn.cursor()
         cursor.execute("""
@@ -46,6 +89,27 @@ def init_db(db_path: Path = config.DB_PATH) -> None:
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_text_hash ON analysis_history(text_hash);")
         conn.commit()
 
+    if auto_cleanup:
+        try:
+            delete_expired_history(months=3, db_path=db_path)
+        except Exception:
+            pass
+
+
+def get_retention_info(months: int = 3, db_path: Path = config.DB_PATH) -> Dict[str, Any]:
+    """Provides current retention policy metadata and cutoff threshold."""
+    cutoff_str = calculate_cutoff_date(months=months)
+    with get_db_connection(db_path) as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) AS count FROM analysis_history WHERE timestamp < ?", (cutoff_str,))
+        expired_count = cursor.fetchone()["count"]
+
+    return {
+        "retention_months": months,
+        "cutoff_timestamp": cutoff_str,
+        "expired_pending": expired_count,
+    }
+
 
 def save_analysis(
     headline: str,
@@ -58,8 +122,8 @@ def save_analysis(
     db_path: Path = config.DB_PATH,
 ) -> int:
     """
-    Saves an analysis record. Stores a brief snippet (up to 240 chars) rather than
-    entire long texts to respect user privacy and storage constraints.
+    Saves an analysis record using UTC timestamps. Stores a brief snippet (up to 240 chars)
+    rather than entire long texts to respect user privacy and storage constraints.
     """
     init_db(db_path)
 
@@ -73,7 +137,7 @@ def save_analysis(
 
     # SHA256 hash for deduplication/auditing
     text_hash = hashlib.sha256((clean_headline + clean_text).encode("utf-8")).hexdigest()
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
     with get_db_connection(db_path) as conn:
         cursor = conn.cursor()
@@ -182,7 +246,7 @@ def get_analysis_by_id(record_id: int, db_path: Path = config.DB_PATH) -> Option
 
 def delete_analysis(record_id: int, db_path: Path = config.DB_PATH) -> bool:
     """Deletes a single analysis record by its primary key."""
-    init_db(db_path)
+    init_db(db_path, auto_cleanup=False)
     with get_db_connection(db_path) as conn:
         cursor = conn.cursor()
         cursor.execute("DELETE FROM analysis_history WHERE id = ?", (record_id,))
@@ -192,7 +256,7 @@ def delete_analysis(record_id: int, db_path: Path = config.DB_PATH) -> bool:
 
 def clear_history(db_path: Path = config.DB_PATH) -> int:
     """Deletes all records from the history table."""
-    init_db(db_path)
+    init_db(db_path, auto_cleanup=False)
     with get_db_connection(db_path) as conn:
         cursor = conn.cursor()
         cursor.execute("DELETE FROM analysis_history")

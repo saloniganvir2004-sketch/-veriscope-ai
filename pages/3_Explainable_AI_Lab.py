@@ -111,7 +111,7 @@ with tab1:
                 "Directional Match": f"{c.get('agreement_k5', {}).get('directional_concordance', 0.0)*100:.1f}%",
                 "Shared Top Tokens": ", ".join(c.get('agreement_k5', {}).get('overlap_words', [])),
             })
-        st.dataframe(pd.DataFrame(case_summaries), hide_index=True, use_container_width=True)
+        st.dataframe(pd.DataFrame(case_summaries), hide_index=True, width="stretch")
 
         st.markdown(
             """
