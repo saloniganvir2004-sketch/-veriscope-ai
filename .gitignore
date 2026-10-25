@@ -65,3 +65,4 @@ artifacts/*.db
 VeriScope_AI_Redesigned_Presentation.pptx
 artifacts/rl_bandit_state.json
 output/
+Start VeriScope.command.backup
