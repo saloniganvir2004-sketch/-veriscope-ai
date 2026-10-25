@@ -168,12 +168,12 @@ with tab2:
             with c1:
                 st.plotly_chart(
                     build_horizontal_bar_chart(l_res.get("top_features", [])[:7], title="LIME Local Feature Weights"),
-                    use_container_width=True,
+                    width="stretch",
                 )
             with c2:
                 st.plotly_chart(
                     build_horizontal_bar_chart(s_res.get("top_features", [])[:7], title="SHAP Shapley Values"),
-                    use_container_width=True,
+                    width="stretch",
                 )
 
 # -----------------------------------------------------------------------------
@@ -244,7 +244,7 @@ with tab4:
     st.markdown(
         """
         **Research Question:** Do highlighted words *genuinely* drive model predictions, or are they spurious?
-        
+
         **Test Design:**
         1. Record the baseline classification confidence $P(\\hat{y}|x)$.
         2. Mask out the top-5 highlighted words ($x \\setminus F^{(5)}$) and observe the confidence drop $\\Delta P_{\\text{top-5}}$.

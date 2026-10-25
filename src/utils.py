@@ -7,6 +7,7 @@ deep midnight navy typography, Plotly visualization builders, and token highligh
 import streamlit as st
 import plotly.graph_objects as go
 import re
+import base64
 from typing import List, Dict, Any, Optional
 from pathlib import Path
 
@@ -53,10 +54,15 @@ def load_custom_css():
     .metric-container {{
         background: {config.COLOR_THEME["surface"]};
         border: 1px solid {config.COLOR_THEME["border"]};
-        border-radius: 8px;
+        border-radius: 10px;
         padding: 18px 16px;
         text-align: center;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+        box-shadow: 0 1px 3px rgba(11, 21, 40, 0.04);
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }}
+    .metric-container:hover {{
+        box-shadow: 0 4px 6px -1px rgba(11, 21, 40, 0.08);
+        transform: translateY(-1px);
     }}
     .metric-value {{
         font-size: 1.85rem;
@@ -66,12 +72,12 @@ def load_custom_css():
         line-height: 1.2;
     }}
     .metric-label {{
-        font-size: 0.82rem;
+        font-size: 0.80rem;
         color: {config.COLOR_THEME["text_muted"]};
         text-transform: uppercase;
-        letter-spacing: 0.04em;
+        letter-spacing: 0.05em;
         margin-top: 6px;
-        font-weight: 500;
+        font-weight: 600;
     }}
 
     /* Refined Status Badges */
@@ -83,7 +89,7 @@ def load_custom_css():
         padding: 5px 14px;
         border-radius: 20px;
         font-weight: 600;
-        font-size: 0.95rem;
+        font-size: 0.92rem;
     }}
 
     .badge-fake {{
@@ -94,19 +100,50 @@ def load_custom_css():
         padding: 5px 14px;
         border-radius: 20px;
         font-weight: 600;
-        font-size: 0.95rem;
+        font-size: 0.92rem;
+    }}
+
+    .badge-insufficient {{
+        display: inline-block;
+        background-color: {config.COLOR_THEME["uncertain_bg"]};
+        color: {config.COLOR_THEME["uncertain"]};
+        border: 1px solid {config.COLOR_THEME["uncertain_border"]};
+        padding: 5px 14px;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.92rem;
+    }}
+
+    .badge-conflict {{
+        display: inline-block;
+        background-color: rgba(99, 102, 241, 0.10);
+        color: #4F46E5;
+        border: 1px solid rgba(99, 102, 241, 0.30);
+        padding: 5px 14px;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.92rem;
     }}
 
     /* Epistemic Research Disclaimer */
     .veritas-disclaimer {{
-        background: #F1F5F9;
+        background: #F8FAFC;
         border-left: 3px solid {config.COLOR_THEME["primary"]};
-        border-radius: 4px;
-        padding: 10px 14px;
+        border-radius: 6px;
+        padding: 12px 16px;
         margin: 12px 0 20px 0;
         font-size: 0.85rem;
         color: {config.COLOR_THEME["text_secondary"]};
-        line-height: 1.5;
+        line-height: 1.55;
+    }}
+
+    /* XAI Callout Box */
+    .veritas-xai-card {{
+        background: {config.COLOR_THEME["accent_lavender_bg"]};
+        border: 1px solid rgba(99, 102, 241, 0.25);
+        border-radius: 8px;
+        padding: 16px 20px;
+        margin-bottom: 18px;
     }}
 
     /* Document highlighted token spans */
@@ -215,11 +252,15 @@ def render_epistemic_disclaimer():
 
 
 def render_svg_asset(svg_path: Path, width: str = "100%"):
-    """Safely renders a local SVG vector illustration with graceful fallback."""
+    """Safely renders a local SVG vector illustration as an encapsulated base64 image."""
     if svg_path.exists():
         try:
-            svg_content = svg_path.read_text(encoding="utf-8")
-            st.markdown(f'<div style="width: {width}; margin: 8px 0;">{svg_content}</div>', unsafe_allow_html=True)
+            svg_bytes = svg_path.read_bytes()
+            b64_str = base64.b64encode(svg_bytes).decode("utf-8")
+            st.markdown(
+                f'<div style="text-align: center; margin: 8px 0;"><img src="data:image/svg+xml;base64,{b64_str}" style="width: {width}; max-width: 100%; height: auto; border-radius: 8px;" alt="VeriScope Editorial Illustration" /></div>',
+                unsafe_allow_html=True,
+            )
             return
         except Exception:
             pass

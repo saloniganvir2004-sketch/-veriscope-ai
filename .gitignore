@@ -41,6 +41,7 @@ htmlcov/
 *.db
 *.sqlite3
 *.log
+logs/
 
 # Streamlit local user credentials
 .streamlit/credentials.toml
@@ -57,3 +58,10 @@ artifacts/*.db
 
 # Streamlit runtime
 .streamlit/secrets.toml
+
+# Local backups and presentation exports
+*.key
+*.bak
+VeriScope_AI_Redesigned_Presentation.pptx
+artifacts/rl_bandit_state.json
+output/

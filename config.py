@@ -98,6 +98,28 @@ SHAP_CONFIG = {
     "top_k_features": 10,
 }
 
+# -----------------------------------------------------------------------------
+# 5b. Natural Language Inference (NLI) & Evidence Verification Settings
+# -----------------------------------------------------------------------------
+NLI_MODEL_NAME = "cross-encoder/nli-deberta-v3-base"
+NLI_FALLBACK_MODEL_NAME = "cross-encoder/nli-deberta-v3-small"
+
+NLI_CONFIG = {
+    "max_length": 512,
+    "batch_size": 8,
+    "entailment_threshold": 0.60,
+    "contradiction_threshold": 0.60,
+    "neutral_margin": 0.15,
+    "device_preference": "mps",  # 'mps' for Apple Silicon acceleration, fallback to 'cpu'
+}
+
+EVIDENCE_CONFIG = {
+    "top_k_passages": 3,
+    "min_retrieval_similarity": 0.08,
+    "high_confidence_similarity": 0.22,
+    "entity_overlap_similarity": 0.12,
+}
+
 # XAI Research Evaluation
 XAI_EVAL_CONFIG = {
     "top_k_agreement": [5, 10],
@@ -130,21 +152,28 @@ DISCLAIMER_TEXT = (
 )
 
 COLOR_THEME = {
-    "bg_body": "#F8F9FA",          # Warm stone / off-white reading area
-    "surface": "#FFFFFF",          # Pure white cards
-    "surface_alt": "#F1F5F9",      # Crisp light slate container
-    "border": "#E2E8F0",           # Soft border
+    "bg_body": "#FBFBFD",          # Clean warm ivory / soft-white canvas
+    "surface": "#FFFFFF",          # Pure white card surface
+    "surface_alt": "#F8FAFC",      # Tinted intelligence panel surface
+    "border": "#E2E8F0",           # Soft delicate border
     "border_subtle": "#CBD5E1",    # Separator line
-    "primary": "#0E7490",          # Muted deep teal accent
-    "primary_hover": "#155E75",    # Darker teal for interaction
+    "primary": "#1D4ED8",          # Rich Cobalt / Electric Blue action color
+    "primary_hover": "#1E40AF",    # Deep cobalt for hover/interaction
+    "primary_light": "#EFF6FF",    # Soft cobalt wash
+    "accent_teal": "#0D9488",      # Crisp teal accent
+    "accent_lavender": "#6366F1",  # Subtle periwinkle / lavender for XAI
+    "accent_lavender_bg": "#EEF2FF", # Soft periwinkle card background
     "secondary": "#334155",        # Slate blue
-    "real": "#15803D",             # Restrained sage green
-    "real_bg": "rgba(21, 128, 61, 0.08)",
-    "real_border": "rgba(21, 128, 61, 0.25)",
-    "fake": "#DC2626",             # Restrained coral red
+    "real": "#059669",             # Crisp emerald green for supported / real
+    "real_bg": "rgba(5, 150, 105, 0.08)",
+    "real_border": "rgba(5, 150, 105, 0.25)",
+    "fake": "#DC2626",             # Restrained coral red for contradicted / fake
     "fake_bg": "rgba(220, 38, 38, 0.08)",
     "fake_border": "rgba(220, 38, 38, 0.25)",
-    "text_main": "#0F172A",        # Deep midnight ink
-    "text_secondary": "#334155",   # Charcoal slate
-    "text_muted": "#64748B",       # Subtle caption text
+    "uncertain": "#D97706",        # Refined amber for uncertainty / insufficient
+    "uncertain_bg": "rgba(217, 119, 6, 0.08)",
+    "uncertain_border": "rgba(217, 119, 6, 0.25)",
+    "text_main": "#0B1528",        # Deep midnight-navy typography
+    "text_secondary": "#334155",   # Charcoal slate secondary text
+    "text_muted": "#64748B",       # Subtle caption and metadata text
 }

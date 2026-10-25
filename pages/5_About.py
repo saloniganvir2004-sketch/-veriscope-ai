@@ -1,7 +1,7 @@
 """
-VeriScope AI - Page 6: About & Project Team
+VeriScope AI - Page 5: About & Project Team
 Academic documentation, project team member allocations, research methodology,
-mathematical formulations, epistemic limitations, and MSc Viva examination preparation.
+mathematical formulations, epistemic limitations, and academic research documentation.
 """
 
 import streamlit as st
@@ -14,16 +14,17 @@ load_custom_css()
 
 render_brand_header(
     title="Project Team & Academic Methodology",
-    subtitle="Team member responsibilities, system architecture, mathematical formulations, and MSc viva defense documentation.",
+    subtitle="Team member responsibilities, system architecture, mathematical formulations, and research methodology.",
 )
 
 # Navigation Tabs
-tab_team, tab_overview, tab_xai, tab_leakage, tab_viva = st.tabs([
+tab_team, tab_subjects, tab_overview, tab_xai, tab_leakage, tab_ethics = st.tabs([
     "👥 Project Team & Responsibilities",
-    "📐 Machine Learning Pipeline",
+    "🎓 Five Academic Subjects Integration",
+    "📐 Machine Learning & NLI Pipeline",
     "🔬 Explainable AI (LIME vs SHAP)",
     "🛡️ The Publisher Leakage Problem",
-    "🎓 MSc Viva Defense Q&A",
+    "⚠️ Responsible Use & Limitations",
 ])
 
 # -----------------------------------------------------------------------------
@@ -164,6 +165,111 @@ with tab_team:
         )
 
 # -----------------------------------------------------------------------------
+# TAB 2: FIVE ACADEMIC SUBJECTS INTEGRATION
+# -----------------------------------------------------------------------------
+with tab_subjects:
+    st.markdown("### Integration Across Five Academic Curriculum Subjects")
+    st.markdown(
+        """
+        VeriScope AI deliberately integrates theoretical concepts and practical algorithms from
+        five distinct core computer science and data science curriculum subjects.
+        """
+    )
+
+    academic_domains = [
+        {
+            "subject": "1. Pattern Recognition & Image Processing",
+            "icon": "📷",
+            "color": config.COLOR_THEME["primary"],
+            "code_ref": "src/ocr.py",
+            "summary": "Local Tesseract 5.5 OCR engine with EXIF orientation detection (OSD), contrast normalization, adaptive thresholding, and headline/body heuristic layout segmentation.",
+            "components": [
+                "EXIF transpose & rotation correction under orientation ambiguity",
+                "Lanczos-filtered resolution scaling & high-contrast grayscale normalization",
+                "Heuristic separation of prominent header blocks from body paragraphs",
+                "Robust byte validation and in-memory error handling for malformed uploads",
+            ],
+        },
+        {
+            "subject": "2. Natural Language Processing (NLP)",
+            "icon": "📝",
+            "color": config.COLOR_THEME["secondary"],
+            "code_ref": "src/preprocessing.py, src/nli_verifier.py",
+            "summary": "Publisher leakage neutralization, sublinear TF-IDF n-gram vectorization, and pre-trained Cross-Encoder Natural Language Inference (cross-encoder/nli-deberta-v3-base / ONNX).",
+            "components": [
+                "Automated regex-based stripping of wire service headers ((Reuters), (AP), datelines)",
+                "Sublinear TF-IDF vectorization with unigram and bigram representation (5,000 max features)",
+                "Neural cross-encoder inference evaluating premise vs claim hypothesis",
+                "Conservative multi-passage aggregation with automated conflict detection",
+            ],
+        },
+        {
+            "subject": "3. Business Intelligence & Analytics",
+            "icon": "📊",
+            "color": config.COLOR_THEME["accent_teal"],
+            "code_ref": "app.py, src/database.py, pages/4_Analysis_History.py",
+            "summary": "Executive intelligence portal, real-time KPI metrics, verification velocity monitoring, and an auditable SQLite storage layer enforcing a 3-calendar-month UTC retention policy.",
+            "components": [
+                "Interactive executive dashboard with verdict breakdowns and auditing velocities",
+                "Persistent SQLite audit logging with SHA-256 deduplication and snippet storage",
+                "Calendar-accurate 3-month retention policy handling leap years and month-end dates",
+                "Exportable audit logs supporting compliance review and retrospective quality control",
+            ],
+        },
+        {
+            "subject": "4. Reinforcement Learning",
+            "icon": "🎯",
+            "color": config.COLOR_THEME["uncertain"],
+            "code_ref": "src/evidence_bandit.py",
+            "summary": "Contextual Multi-Armed Bandit (Upper Confidence Bound - UCB1) adaptively routing retrieval queries using an objective, non-circular quality reward.",
+            "components": [
+                "Three discrete retrieval arms: entity_focused, semantic_hybrid, and keyphrase_ngram",
+                "UCB1 action-selection balancing exploration of uncertain formulations with exploitation",
+                "Non-circular reward: R = 0.50 * Sim + 0.30 * EntityCov + 0.20 * NLI_Margin",
+                "State persistence in JSON artifacts enabling continuous learning across sessions",
+            ],
+        },
+        {
+            "subject": "5. Professional Ethics & Social Responsibility",
+            "icon": "⚖️",
+            "color": config.COLOR_THEME["real"],
+            "code_ref": "pages/5_About.py, src/utils.py",
+            "summary": "Epistemic modesty disclosures, zero fabricated confidence, transparent provenance tiering, data privacy compliance, and dual-explainer algorithmic accountability.",
+            "components": [
+                "Explicit epistemic boundaries: models predict dataset resemblance, not absolute truth",
+                "Zero fabricated metrics or illustrative numbers presented as real outputs",
+                "Dual XAI accountability: LIME and SHAP verify feature contributions without black boxes",
+                "Privacy-preserving retention: stored snippets truncate long personal texts",
+            ],
+        },
+    ]
+
+    for subj in academic_domains:
+        items_html = "".join([f"<li style='margin-bottom: 3px;'>{c}</li>" for c in subj["components"]])
+        st.markdown(
+            f"""
+            <div class="veritas-card" style="border-left: 4px solid {subj['color']}; margin-bottom: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                    <div style="font-size: 1.15rem; font-weight: 700; color: #0B1528;">
+                        {subj['icon']} {subj['subject']}
+                    </div>
+                    <code style="background: #F1F5F9; color: {subj['color']}; padding: 3px 8px; border-radius: 4px; font-size: 0.82rem;">{subj['code_ref']}</code>
+                </div>
+                <p style="color: #334155; font-size: 0.92rem; line-height: 1.55; margin: 4px 0 10px 0;">
+                    {subj['summary']}
+                </p>
+                <div style="font-size: 0.82rem; text-transform: uppercase; color: #64748B; font-weight: 600; margin-bottom: 4px;">
+                    Key Functional Implementations:
+                </div>
+                <ul style="font-size: 0.88rem; color: #475569; line-height: 1.5; margin: 0; padding-left: 20px;">
+                    {items_html}
+                </ul>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+# -----------------------------------------------------------------------------
 # TAB 2: MACHINE LEARNING PIPELINE
 # -----------------------------------------------------------------------------
 with tab_overview:
@@ -181,7 +287,7 @@ with tab_overview:
         """
         Features are bounded to a maximum vocabulary of 5,000 to maintain computational efficiency
         for real-time XAI explainers while capturing rich stylistic n-grams.
-        
+
         #### 2. Model Architectures Evaluated:
         1. **Logistic Regression (L2 Regularized):**
            Maximizes the log-likelihood of binomial posterior distribution:
@@ -222,7 +328,7 @@ with tab_xai:
         """
         - **Sampling Variance:** Because perturbations are drawn randomly, LIME exhibits slight sampling
           variance across executions.
-        
+
         #### 2. SHAP (SHapley Additive exPlanations)
         SHAP computes the unique attribution satisfying Local Accuracy, Missingness, and Consistency
         grounded in cooperative game theory:
@@ -239,7 +345,7 @@ with tab_xai:
         """
         This calculation executes in **$<100\text{ ms}$**, eliminating the typical 30-second latency
         of KernelExplainer on high-dimensional text.
-        
+
         #### 3. Quantitative Agreement Metric (Jaccard Index)
         """
     )
@@ -268,12 +374,12 @@ with tab_leakage:
         LONDON (Reuters) - British inflation eased...
         ```
         Meanwhile, fake news articles originate from third-party blogs without wire signatures.
-        
+
         #### The Resulting Machine Learning Failure:
         A naive TF-IDF model will assign the highest negative weights to tokens like `"reuters"`,
         `"washington"`, and `"reporting"`. The model achieves an artificial **99.8% accuracy** by purely
         detecting whether the word `"reuters"` is present, **learning zero linguistic or stylometric cues of deception**.
-        
+
         #### VeriScope AI's Methodological Solution:
         1. **Automated Leakage Stripping:** `src/preprocessing.py` applies rigorous regular expressions
            to eliminate wire service prefixes, datelines, and editorial sign-offs before vectorization.
@@ -283,76 +389,53 @@ with tab_leakage:
     )
 
 # -----------------------------------------------------------------------------
-# TAB 5: MSC VIVA DEFENSE PREPARATION
+# TAB 6: RESPONSIBLE USE & LIMITATIONS
 # -----------------------------------------------------------------------------
-with tab_viva:
-    st.markdown("### Master's Viva Defense Examination Guide")
-    st.markdown("Key questions and academic defenses for university project assessment:")
+with tab_ethics:
+    st.markdown("### Ethical Boundaries, Transparency & Operational Limitations")
+    st.markdown(
+        f"""
+        <div class="veritas-card" style="border-left: 4px solid {config.COLOR_THEME['uncertain']}; margin-bottom: 20px;">
+            <h4 style="font-size: 1.15rem; font-weight: 700; color: #0B1528; margin: 0 0 8px 0;">
+                Core Epistemic Principles
+            </h4>
+            <div style="font-size: 0.92rem; color: #334155; line-height: 1.6;">
+                <p>
+                    <strong>1. Classification Confidence is Not Proof of Truth:</strong>
+                    Machine learning classifiers evaluate whether submitted text shares stylistic, lexical, and structural
+                    patterns with historical disinformation records. High model confidence indicates strong pattern resemblance,
+                    never absolute ontological truth.
+                </p>
+                <p>
+                    <strong>2. Local Reference Boundaries:</strong>
+                    The evidence verification subsystem queries our curated, locally auditable reference archive of 16 multi-domain
+                    records. A verdict of <em>Insufficient Evidence</em> indicates absence of corroborating passages within this
+                    local archive, not that an external claim is false.
+                </p>
+                <p>
+                    <strong>3. Conflict Transparency:</strong>
+                    When retrieved records yield contradictory stances, the platform does not choose an arbitrary verdict.
+                    It explicitly flags conflicting evidence to preserve neutrality and user agency.
+                </p>
+                <p style="margin-bottom: 0;">
+                    <strong>4. Privacy Compliance & Data Minimization:</strong>
+                    Submitted articles are never sent to external commercial APIs. Database retention is strictly capped at
+                    3 calendar months (UTC), storing only truncated snippets rather than full proprietary texts.
+                </p>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-    with st.expander("Q1: Why does your model not prove whether an article is factually true?"):
-        st.markdown(
-            """
-            **Defense:** Natural language processing models operating on statistical stylometry (TF-IDF, word frequencies)
-            detect **linguistic patterns, emotional intensity, and stylistic structure** correlated with disinformation
-            in the training corpus. They do not possess external knowledge bases or world verification capabilities.
-            An objectively false claim written in formal academic prose will test as 'Likely Real', whereas a true claim
-            written in sensationalist capital letters may test as 'Likely Fake'. We explicitly enforce this epistemic
-            limitation in our disclaimer.
-            """
-        )
-
-    with st.expander("Q2: Why did you compare LIME and SHAP rather than using only one explainer?"):
-        st.markdown(
-            """
-            **Defense:** A central challenge in Explainable AI is the absence of ground-truth explanation labels.
-            By comparing LIME (a perturbation-based local surrogate) against SHAP (a game-theoretic Shapley decomposition),
-            we can cross-validate explanation consistency. Our research suite evaluates their Top-$k$ Jaccard agreement,
-            perturbation stability, and feature masking fidelity to determine whether local explanations are trustworthy.
-            """
-        )
-
-    with st.expander("Q3: How did you handle data leakage during preprocessing?"):
-        st.markdown(
-            """
-            **Defense:** We implemented three strict architectural controls:
-            1. All wire-service publisher headers (`(Reuters)`, `(AP)`, datelines) were stripped using regex.
-            2. Stratified splitting (70% train, 15% val, 15% test) was performed *before* any feature extraction.
-            3. The TF-IDF vectorizer was strictly fitted *only* on the training split; unseen test vocabulary was ignored.
-            """
-        )
-
-    with st.expander("Q4: Why did you calibrate the Linear SVM rather than using raw decision scores?"):
-        st.markdown(
-            r"""
-            **Defense:** Linear Support Vector Machines optimize a hinge loss objective, yielding signed margin distances
-            $f(\mathbf{x}) = \mathbf{w}^T \mathbf{x} + b \in (-\infty, \infty)$. These scores lack probabilistic properties
-            (they are uncalibrated and non-probabilistic). To present valid model confidence scores, we applied Platt Scaling
-            via `CalibratedClassifierCV(method='sigmoid', cv=3)` strictly on internal training folds, guaranteeing proper
-            posterior probabilities bounded in $[0, 1]$.
-            """
-        )
-
-    with st.expander("Q5: What are the primary failure modes of this system?"):
-        st.markdown(
-            """
-            **Defense:**
-            1. **Sarcasm and Satire:** Sublinear TF-IDF cannot capture deep pragmatic context or double meanings.
-            2. **Vocabulary Shift:** Novel disinformation campaigns using emergent terminology not present in the 5,000-word
-               vocabulary will suffer from out-of-vocabulary attenuation.
-            3. **Adversarial Paraphrasing:** A malicious actor can rewrite disinformation in sober, dry journalistic language
-               to evade stylometric detection.
-            """
-        )
-
-    with st.expander("Q6: How does the Image OCR pipeline process visual screenshots?"):
-        st.markdown(
-            """
-            **Defense:** Uploaded news clippings and screenshots are decoded via Pillow, orientation-corrected using EXIF metadata
-            and Tesseract OSD, converted to high-contrast grayscale, and filtered with edge sharpening. Tesseract extracts the textual contents,
-            which are separated into candidate headline and context, and presented in an editable review window before feeding directly into the same leakage-sanitized
-            TF-IDF inference and dual XAI attribution pipeline.
-            """
-        )
+    st.markdown(
+        """
+        #### Operational Limitations:
+        - **Evolving Misinformation Campaigns:** Deceptive narrative patterns shift rapidly. A model trained on static corpora may struggle with novel rhetorical devices.
+        - **OCR Quality Dependencies:** Tesseract text extraction accuracy depends heavily on input image resolution, font rendering, and contrast. Reviewing extracted text before analysis is mandatory.
+        - **Absence of Real-Time Web Scraping:** VeriScope AI intentionally operates strictly offline without unauthorized live scraping or paid API tokens to ensure reproducible academic grading.
+        """
+    )
 
 # Epistemic notice at bottom
 st.write("")

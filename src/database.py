@@ -289,3 +289,30 @@ def get_history_stats(db_path: Path = config.DB_PATH) -> Dict[str, Any]:
         "fake_count": fake_count,
         "avg_confidence": round(avg_confidence, 4),
     }
+
+
+def get_activity_by_date(db_path: Path = config.DB_PATH) -> List[Dict[str, Any]]:
+    """Retrieves count of analyses grouped by date (YYYY-MM-DD) based on real stored timestamps."""
+    init_db(db_path)
+    with get_db_connection(db_path) as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT substr(timestamp, 1, 10) AS analysis_date,
+                   COUNT(*) AS total_count,
+                   SUM(CASE WHEN prediction = 'Likely Real' THEN 1 ELSE 0 END) AS real_count,
+                   SUM(CASE WHEN prediction = 'Likely Fake' THEN 1 ELSE 0 END) AS fake_count
+            FROM analysis_history
+            GROUP BY substr(timestamp, 1, 10)
+            ORDER BY analysis_date ASC
+            LIMIT 30;
+        """)
+        rows = cursor.fetchall()
+        return [
+            {
+                "date": r["analysis_date"],
+                "total": int(r["total_count"]),
+                "real": int(r["real_count"] or 0),
+                "fake": int(r["fake_count"] or 0),
+            }
+            for r in rows
+        ]

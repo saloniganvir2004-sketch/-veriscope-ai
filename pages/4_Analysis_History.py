@@ -174,4 +174,4 @@ else:
         unsafe_allow_html=True,
     )
     if st.button("Go to News Analyzer"):
-        st.switch_page("pages/2_News_Analyzer.py")
+        st.switch_page("pages/1_News_Analyzer.py")

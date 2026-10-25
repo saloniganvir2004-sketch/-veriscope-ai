@@ -90,6 +90,9 @@ def run_pipeline_analysis(headline: str, body: str, source_type: str = "manual")
             shap_exp = VeritasShapExplainer(pipeline)
             shap_res = shap_exp.explain(unified_doc)
 
+            retriever = LocalEvidenceRetriever()
+            evidence_res = retriever.verify_claim(clean_h, clean_b)
+
             st.session_state["active_analysis"] = {
                 "source_type": source_type,
                 "headline": clean_h,
@@ -98,6 +101,7 @@ def run_pipeline_analysis(headline: str, body: str, source_type: str = "manual")
                 "prediction": pred_res,
                 "lime": lime_res,
                 "shap": shap_res,
+                "evidence": evidence_res,
             }
             st.session_state["record_saved"] = False
         except Exception as e:
@@ -175,7 +179,7 @@ with tab_manual:
         st.caption(f"{m_word_count} words · {m_char_count} characters (Max {config.OCR_CONFIG['max_text_length']:,})")
 
     with col_btn:
-        trigger_manual = st.button("Analyze News", type="primary", use_container_width=True, key="btn_manual_analyze")
+        trigger_manual = st.button("Analyze News", type="primary", width="stretch", key="btn_manual_analyze")
 
     if trigger_manual:
         # Strict field validation
@@ -243,12 +247,12 @@ with tab_ocr:
                     st.image(
                         pil_img,
                         caption=f"Uploaded: {uploaded_image.name} ({w}×{h}px · {len(file_bytes)/1024:.1f} KB)",
-                        use_container_width=True,
+                        width="stretch",
                     )
                 except Exception as e:
                     st.error(f"Could not render image preview: {e}")
 
-                if st.button("🔍 Extract Text via Tesseract OCR", type="primary", use_container_width=True, disabled=not tess_avail):
+                if st.button("🔍 Extract Text via Tesseract OCR", type="primary", width="stretch", disabled=not tess_avail):
                     with st.spinner("Executing local Tesseract OCR & image preprocessing..."):
                         ocr_res = extract_text_from_image(file_bytes, uploaded_image.name)
                         if ocr_res["success"]:
@@ -300,7 +304,7 @@ with tab_ocr:
                 ocr_tot_words = len(f"{ocr_h_val} {ocr_b_val}".split()) if (ocr_h_val or ocr_b_val) else 0
                 st.caption(f"{ocr_tot_words} words ready for analysis")
 
-                if st.button("Analyze News Story", type="primary", use_container_width=True, key="btn_ocr_analyze"):
+                if st.button("Analyze News Story", type="primary", width="stretch", key="btn_ocr_analyze"):
                     has_oh = bool(ocr_h_val.strip())
                     has_ob = bool(ocr_b_val.strip())
 
@@ -492,7 +496,7 @@ if st.session_state["active_analysis"]:
         )
         if lime.get("available"):
             fig_lime = build_horizontal_bar_chart(lime["top_features"][:8], title="Top LIME Attributions")
-            st.plotly_chart(fig_lime, use_container_width=True)
+            st.plotly_chart(fig_lime, width="stretch")
             st.caption(f"Local Model Fidelity (R²): {lime.get('local_fidelity_r2', 0.0):.3f}")
         else:
             st.info(lime.get("message", "LIME explanation unavailable."))
@@ -513,48 +517,128 @@ if st.session_state["active_analysis"]:
         )
         if shap.get("available"):
             fig_shap = build_horizontal_bar_chart(shap["top_features"][:8], title="Top SHAP Attributions")
-            st.plotly_chart(fig_shap, use_container_width=True)
+            st.plotly_chart(fig_shap, width="stretch")
             st.caption(f"Shapley Expected Base Value: {shap.get('base_value', 0.0):.3f}")
         else:
             st.info(shap.get("message", "SHAP explanation unavailable."))
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # Optional Contextual Evidence Retrieval
-    with st.expander("📚 Contextual Evidence Retrieval (Local Reference Corpus)"):
-        st.markdown(
-            """
-            <p style="color: #64748B; font-size: 0.85rem; margin-bottom: 12px;">
-                Retrieves semantically aligned passages from our local journalistic and fact-check archive.
-                <br><em>Note: Semantic text similarity provides context; it does not constitute definitive proof of truth.</em>
-            </p>
-            """,
-            unsafe_allow_html=True,
-        )
-        retriever = LocalEvidenceRetriever()
-        retrieved_passages = retriever.retrieve(res["unified_doc"], top_k=2)
+    # =============================================================================
+    # PART 2: EVIDENCE-BASED FACT-CHECKING ASSESSMENT (DISTINCT FROM CLASSIFIER)
+    # =============================================================================
+    st.write("")
+    st.markdown("---")
+    st.markdown("#### Factual Corroboration & Evidence Verification")
+    st.caption("Independent evidence verification against our curated reference fact-check corpus, routed via an adaptive Reinforcement Learning Contextual Bandit.")
 
-        if retrieved_passages:
-            for p in retrieved_passages:
-                status_color = config.COLOR_THEME["real"] if ("Verified" in p["claim_status"] or "Official" in p["claim_status"]) else config.COLOR_THEME["fake"]
-                st.markdown(
-                    f"""
-                    <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; padding: 12px; margin-bottom: 10px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                            <span style="font-size: 0.88rem; font-weight: 600; color: #0F172A;">{p['title']}</span>
-                            <span style="font-size: 0.75rem; background: #FFFFFF; color: {status_color}; padding: 2px 8px; border-radius: 4px; border: 1px solid {status_color};">
-                                {p['claim_status']}
+    ev = res.get("evidence")
+    if not ev:
+        retriever = LocalEvidenceRetriever()
+        ev = retriever.verify_claim(res["headline"], res["text"])
+        res["evidence"] = ev
+
+    ev_outcome = ev.get("outcome", "Insufficient Evidence")
+    ev_badge_style = ev.get("badge_style", "badge-insufficient")
+    ev_reasoning = ev.get("reasoning", "")
+    ev_sources = ev.get("sources", [])
+    ev_strategy = ev.get("strategy_used", "semantic_hybrid")
+    ev_reward = ev.get("rl_reward", 0.0)
+    conflict_detected = ev.get("conflict_detected", False)
+
+    if conflict_detected:
+        ev_accent = "#6366F1"
+        ev_outcome_text = "Conflicting Evidence Detected"
+        ev_badge_style = "badge-conflict"
+    elif "Supported" in ev_outcome:
+        ev_accent = config.COLOR_THEME["real"]
+        ev_outcome_text = "Supported by Available Evidence"
+    elif "Contradicted" in ev_outcome:
+        ev_accent = config.COLOR_THEME["fake"]
+        ev_outcome_text = "Contradicted by Available Evidence"
+    else:
+        ev_accent = config.COLOR_THEME["uncertain"]
+        ev_outcome_text = "Insufficient Evidence"
+
+    st.markdown(
+        f"""
+        <div class="veritas-card" style="border-left: 4px solid {ev_accent};">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
+                <div>
+                    <div style="font-size: 0.8rem; text-transform: uppercase; color: #64748B; font-weight: 600; letter-spacing: 0.04em;">
+                        Fact-Checking Verification Outcome
+                    </div>
+                    <div style="margin-top: 6px;">
+                        <span class="{ev_badge_style}" style="font-size: 1.05rem; padding: 6px 16px;">{ev_outcome_text}</span>
+                    </div>
+                </div>
+                <div style="text-align: right;">
+                    <span style="font-size: 0.78rem; color: #64748B; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">RL Bandit Route (Subject D)</span>
+                    <div style="font-size: 0.92rem; font-weight: 600; color: {config.COLOR_THEME['primary']}; margin-top: 4px;">
+                        Strategy: <code>{ev_strategy}</code>
+                    </div>
+                    <div style="font-size: 0.76rem; color: #64748B; margin-top: 2px;">
+                        Objective Retrieval Reward: <strong>{ev_reward:+.3f}</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div style="background: #F8FAFC; border: 1px solid #E2E8F0; padding: 14px; border-radius: 6px; margin: 16px 0; font-size: 0.92rem; line-height: 1.6; color: #334155;">
+                <strong>Verification Reasoning:</strong> {ev_reasoning}
+            </div>
+
+            <div style="font-size: 0.82rem; color: #64748B; margin-bottom: 4px;">
+                <em>Epistemic Distinction: The Statistical Model assesses linguistic & stylometric patterns of deception; this Evidence Engine verifies whether key factual claims match external journalistic records.</em>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    if ev_sources:
+        st.markdown("###### Verified Reference Citations & Matched Dispatches")
+        for s in ev_sources:
+            s_color = config.COLOR_THEME["real"] if ("Verified" in s.get("claim_status", "") or "Official" in s.get("claim_status", "")) else config.COLOR_THEME["fake"]
+            nli_stance = s.get("nli_stance")
+            if nli_stance == "SUPPORTS":
+                nli_pill = f'<span style="background: rgba(5,150,105,0.1); color: #059669; border: 1px solid rgba(5,150,105,0.3); border-radius: 12px; padding: 3px 8px; font-size: 0.75rem; font-weight: 600;">NLI: Supports ({s.get("nli_confidence", 0.0)*100:.1f}%)</span>'
+            elif nli_stance == "CONTRADICTS":
+                nli_pill = f'<span style="background: rgba(220,38,38,0.1); color: #DC2626; border: 1px solid rgba(220,38,38,0.3); border-radius: 12px; padding: 3px 8px; font-size: 0.75rem; font-weight: 600;">NLI: Contradicts ({s.get("nli_confidence", 0.0)*100:.1f}%)</span>'
+            elif nli_stance == "NEUTRAL":
+                nli_pill = f'<span style="background: rgba(100,116,139,0.1); color: #64748B; border: 1px solid rgba(100,116,139,0.3); border-radius: 12px; padding: 3px 8px; font-size: 0.75rem; font-weight: 600;">NLI: Neutral</span>'
+            else:
+                nli_pill = ""
+
+            st.markdown(
+                f"""
+                <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-left: 3px solid {s_color}; border-radius: 6px; padding: 14px; margin-bottom: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 6px;">
+                        <div>
+                            <span style="font-size: 0.95rem; font-weight: 700; color: #0B1528;">{s.get('title', 'Reference Article')}</span>
+                            <div style="font-size: 0.8rem; color: #64748B; margin-top: 2px;">
+                                Publisher: <strong>{s.get('publisher', s.get('source', 'Fact-Check Bureau'))}</strong> &nbsp;·&nbsp; Date: {s.get('date', 'Recent')} &nbsp;·&nbsp; Semantic Match: <code>{s.get('similarity_score', 0.0):.3f}</code>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                            {nli_pill}
+                            <span style="font-size: 0.75rem; background: #F8FAFC; color: {s_color}; padding: 3px 10px; border-radius: 12px; border: 1px solid {s_color}40; font-weight: 600; white-space: nowrap;">
+                                {s.get('claim_status', 'Archived Dispatch')}
                             </span>
                         </div>
-                        <p style="color: #334155; font-size: 0.86rem; margin: 4px 0; line-height: 1.5;">{p['passage']}</p>
-                        <div style="font-size: 0.75rem; color: #64748B;">
-                            Source: {p['source']} · Date: {p['date']} · Cosine Match: {p['similarity_score']:.3f}
-                        </div>
                     </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-        else:
-            st.info("No matching reference passages found above the similarity threshold.")
+                    <p style="color: #334155; font-size: 0.88rem; line-height: 1.55; margin: 8px 0 10px 0; font-family: Georgia, serif; font-style: italic;">
+                        “{s.get('passage', '')}”
+                    </p>
+                    <div style="font-size: 0.8rem;">
+                        <a href="{s.get('url', '#')}" target="_blank" style="color: {config.COLOR_THEME['primary']}; text-decoration: none; font-weight: 500;">
+                            ↗ View Official Citation Source ({s.get('publisher', 'Verified Archive')})
+                        </a>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+    else:
+        st.info("No matching reference citations met the corroborated similarity threshold for this submission.")
 
     # Save to Database Section
     st.write("")
@@ -563,7 +647,7 @@ if st.session_state["active_analysis"]:
         st.caption("Store this record in the local SQLite database for compliance auditing (auto-retained for 3 calendar months).")
     with save_col2:
         if not st.session_state["record_saved"]:
-            if st.button("Save Analysis to History", use_container_width=True, key="btn_save_analysis"):
+            if st.button("Save Analysis to History", width="stretch", key="btn_save_analysis"):
                 top_feats = shap.get("top_features", [])[:5]
                 save_analysis(
                     headline=res["headline"],
@@ -578,7 +662,7 @@ if st.session_state["active_analysis"]:
                 st.success("Analysis saved to local SQLite history!")
                 st.rerun()
         else:
-            st.button("✓ Record Saved", disabled=True, use_container_width=True, key="btn_saved_disabled")
+            st.button("✓ Record Saved", disabled=True, width="stretch", key="btn_saved_disabled")
 
     # Epistemic notice at bottom of results
     st.write("")

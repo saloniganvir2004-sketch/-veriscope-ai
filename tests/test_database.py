@@ -85,6 +85,13 @@ def test_db_lifecycle(temp_db):
     assert deleted is True
     assert get_history_stats(temp_db)["total_records"] == 1
 
+    # 6b. Activity by date
+    from src.database import get_activity_by_date
+    act = get_activity_by_date(temp_db)
+    assert len(act) == 1
+    assert act[0]["total"] == 1
+    assert act[0]["fake"] == 1
+
     # 7. Clear all
     cleared = clear_history(temp_db)
     assert cleared == 1

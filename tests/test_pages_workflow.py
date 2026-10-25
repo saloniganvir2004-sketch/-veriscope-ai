@@ -11,7 +11,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 def test_about_page_team_members_and_enrolments():
     """Verifies all five team members and their exact enrolment numbers on About page."""
-    at = AppTest.from_file(str(BASE_DIR / "pages/6_About.py"), default_timeout=20)
+    at = AppTest.from_file(str(BASE_DIR / "pages/5_About.py"), default_timeout=20)
     at.run()
     assert not at.exception
 
@@ -76,7 +76,7 @@ def test_landing_page_structure():
 
 def test_news_analyzer_empty_input_validation():
     """Verifies that clicking analyze with empty input displays error messages."""
-    at = AppTest.from_file(str(BASE_DIR / "pages/2_News_Analyzer.py"), default_timeout=20)
+    at = AppTest.from_file(str(BASE_DIR / "pages/1_News_Analyzer.py"), default_timeout=20)
     at.run()
     assert not at.exception
 
@@ -92,10 +92,38 @@ def test_news_analyzer_empty_input_validation():
 
 def test_analysis_history_retention_notice():
     """Verifies that the 3-month retention notice is displayed on the history page."""
-    at = AppTest.from_file(str(BASE_DIR / "pages/5_Analysis_History.py"), default_timeout=20)
+    at = AppTest.from_file(str(BASE_DIR / "pages/4_Analysis_History.py"), default_timeout=20)
     at.run()
     assert not at.exception
 
     markdown_all = " ".join([m.value for m in at.markdown])
     assert "Retention Policy" in markdown_all
     assert "3 calendar months" in markdown_all
+
+
+def test_news_analyzer_end_to_end_workflow():
+    """Verifies end-to-end classification, XAI explanations, and evidence verification."""
+    at = AppTest.from_file(str(BASE_DIR / "pages/1_News_Analyzer.py"), default_timeout=30)
+    at.run()
+    assert not at.exception
+
+    at.text_input(key="widget_manual_headline").input("Federal Reserve Holds Benchmark Interest Rates Steady")
+    at.text_area(key="widget_manual_body").input("The Federal Reserve voted to keep rates unchanged in the target range.")
+    at.button(key="btn_manual_analyze").click().run(timeout=30)
+
+    assert not at.exception
+    markdown_all = " ".join([m.value for m in at.markdown])
+    assert "Classification Assessment" in markdown_all
+    assert "Fact-Checking Verification" in markdown_all
+    assert "Active Model" in markdown_all
+
+
+def test_model_performance_rl_bandit_display():
+    """Verifies that Model Performance displays the Subject D Reinforcement Learning bandit."""
+    at = AppTest.from_file(str(BASE_DIR / "pages/3_Model_Performance.py"), default_timeout=20)
+    at.run()
+    assert not at.exception
+
+    markdown_all = " ".join([m.value for m in at.markdown])
+    assert "Reinforcement Learning" in markdown_all
+    assert "Contextual Bandit" in markdown_all
