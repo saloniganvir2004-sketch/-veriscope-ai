@@ -1,67 +1,96 @@
 {
-  "best_model_name": "Logistic Regression",
+  "best_model_name": "Linear SVM",
+  "training_timestamp": "2026-10-26T11:09:42.629769",
+  "random_seed": 42,
+  "evaluation_dataset": "ISOT Fake News Dataset (External)",
+  "is_external": true,
+  "leakage_prevention": "group_aware_stratified_split",
+  "partition_sizes": {
+    "train": 30869,
+    "val": 6629,
+    "test": 6685
+  },
+  "selection_rationale": "Selected based on highest validation Macro F1 score (0.9855). Linear SVM provides robust probability calibration, continuous log-odds interpretability, and direct mathematical compatibility with shap.LinearExplainer.",
   "comparison": {
     "Logistic Regression": {
       "validation": {
-        "accuracy": 1.0,
-        "macro_f1": 1.0,
-        "macro_precision": 1.0,
-        "macro_recall": 1.0
+        "accuracy": 0.9834,
+        "macro_f1": 0.9834,
+        "macro_precision": 0.9833,
+        "macro_recall": 0.9837
       },
       "test": {
-        "accuracy": 1.0,
-        "macro_f1": 1.0,
-        "macro_precision": 1.0,
-        "macro_recall": 1.0
+        "accuracy": 0.9837,
+        "macro_f1": 0.9837,
+        "macro_precision": 0.9835,
+        "macro_recall": 0.984,
+        "total_samples": 6685,
+        "correct_predictions": 6576,
+        "error_count": 109
       }
     },
     "Multinomial Naive Bayes": {
       "validation": {
-        "accuracy": 1.0,
-        "macro_f1": 1.0,
-        "macro_precision": 1.0,
-        "macro_recall": 1.0
+        "accuracy": 0.9455,
+        "macro_f1": 0.9455,
+        "macro_precision": 0.9455,
+        "macro_recall": 0.9455
       },
       "test": {
-        "accuracy": 1.0,
-        "macro_f1": 1.0,
-        "macro_precision": 1.0,
-        "macro_recall": 1.0
+        "accuracy": 0.9445,
+        "macro_f1": 0.9444,
+        "macro_precision": 0.9443,
+        "macro_recall": 0.9445,
+        "total_samples": 6685,
+        "correct_predictions": 6314,
+        "error_count": 371
       }
     },
     "Linear SVM": {
       "validation": {
-        "accuracy": 1.0,
-        "macro_f1": 1.0,
-        "macro_precision": 1.0,
-        "macro_recall": 1.0
+        "accuracy": 0.9855,
+        "macro_f1": 0.9855,
+        "macro_precision": 0.9854,
+        "macro_recall": 0.9857
       },
       "test": {
-        "accuracy": 1.0,
-        "macro_f1": 1.0,
-        "macro_precision": 1.0,
-        "macro_recall": 1.0
+        "accuracy": 0.9831,
+        "macro_f1": 0.9831,
+        "macro_precision": 0.9829,
+        "macro_recall": 0.9835,
+        "total_samples": 6685,
+        "correct_predictions": 6572,
+        "error_count": 113
       }
     }
   },
   "test_evaluations": {
     "Logistic Regression": {
-      "accuracy": 1.0,
-      "macro_f1": 1.0,
-      "macro_precision": 1.0,
-      "macro_recall": 1.0
+      "accuracy": 0.9837,
+      "macro_f1": 0.9837,
+      "macro_precision": 0.9835,
+      "macro_recall": 0.984,
+      "total_samples": 6685,
+      "correct_predictions": 6576,
+      "error_count": 109
     },
     "Multinomial Naive Bayes": {
-      "accuracy": 1.0,
-      "macro_f1": 1.0,
-      "macro_precision": 1.0,
-      "macro_recall": 1.0
+      "accuracy": 0.9445,
+      "macro_f1": 0.9444,
+      "macro_precision": 0.9443,
+      "macro_recall": 0.9445,
+      "total_samples": 6685,
+      "correct_predictions": 6314,
+      "error_count": 371
     },
     "Linear SVM": {
-      "accuracy": 1.0,
-      "macro_f1": 1.0,
-      "macro_precision": 1.0,
-      "macro_recall": 1.0
+      "accuracy": 0.9831,
+      "macro_f1": 0.9831,
+      "macro_precision": 0.9829,
+      "macro_recall": 0.9835,
+      "total_samples": 6685,
+      "correct_predictions": 6572,
+      "error_count": 113
     }
   }
 }

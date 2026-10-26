@@ -22,6 +22,28 @@ def load_custom_css():
 
     html, body, [class*="css"] {{
         font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+        font-size: 16px;
+        line-height: 1.6;
+    }}
+
+    /* Global Typography Scaling */
+    h1 {{
+        font-size: 2.1rem !important;
+        font-weight: 700 !important;
+        color: {config.COLOR_THEME["text_main"]} !important;
+    }}
+    h2 {{
+        font-size: 1.5rem !important;
+        font-weight: 600 !important;
+        color: {config.COLOR_THEME["text_main"]} !important;
+    }}
+    h3 {{
+        font-size: 1.25rem !important;
+        font-weight: 600 !important;
+        color: {config.COLOR_THEME["text_main"]} !important;
+    }}
+    p, li, span {{
+        font-size: 1rem;
     }}
 
     /* Base application background */
@@ -41,7 +63,7 @@ def load_custom_css():
     }}
 
     .veritas-card-header {{
-        font-size: 1.05rem;
+        font-size: 1.15rem;
         font-weight: 600;
         color: {config.COLOR_THEME["text_main"]};
         margin-bottom: 12px;
@@ -65,14 +87,14 @@ def load_custom_css():
         transform: translateY(-1px);
     }}
     .metric-value {{
-        font-size: 1.85rem;
+        font-size: 2.05rem;
         font-weight: 700;
         color: {config.COLOR_THEME["text_main"]};
         font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
         line-height: 1.2;
     }}
     .metric-label {{
-        font-size: 0.80rem;
+        font-size: 0.88rem;
         color: {config.COLOR_THEME["text_muted"]};
         text-transform: uppercase;
         letter-spacing: 0.05em;
@@ -89,7 +111,7 @@ def load_custom_css():
         padding: 5px 14px;
         border-radius: 20px;
         font-weight: 600;
-        font-size: 0.92rem;
+        font-size: 0.96rem;
     }}
 
     .badge-fake {{
@@ -100,7 +122,7 @@ def load_custom_css():
         padding: 5px 14px;
         border-radius: 20px;
         font-weight: 600;
-        font-size: 0.92rem;
+        font-size: 0.96rem;
     }}
 
     .badge-insufficient {{
@@ -111,7 +133,7 @@ def load_custom_css():
         padding: 5px 14px;
         border-radius: 20px;
         font-weight: 600;
-        font-size: 0.92rem;
+        font-size: 0.96rem;
     }}
 
     .badge-conflict {{
@@ -122,7 +144,7 @@ def load_custom_css():
         padding: 5px 14px;
         border-radius: 20px;
         font-weight: 600;
-        font-size: 0.92rem;
+        font-size: 0.96rem;
     }}
 
     /* Epistemic Research Disclaimer */
@@ -130,11 +152,11 @@ def load_custom_css():
         background: #F8FAFC;
         border-left: 3px solid {config.COLOR_THEME["primary"]};
         border-radius: 6px;
-        padding: 12px 16px;
+        padding: 14px 18px;
         margin: 12px 0 20px 0;
-        font-size: 0.85rem;
+        font-size: 0.92rem;
         color: {config.COLOR_THEME["text_secondary"]};
-        line-height: 1.55;
+        line-height: 1.6;
     }}
 
     /* XAI Callout Box */
@@ -168,7 +190,8 @@ def load_custom_css():
     .stButton>button {{
         border-radius: 6px;
         font-weight: 600;
-        font-size: 0.9rem;
+        font-size: 0.98rem;
+        padding: 0.5rem 1rem;
         transition: all 0.15s ease-in-out;
     }}
 
@@ -194,6 +217,13 @@ def load_custom_css():
         border: 1px solid {config.COLOR_THEME["border_subtle"]} !important;
         border-radius: 6px !important;
         color: {config.COLOR_THEME["text_main"]} !important;
+        font-size: 15.5px !important;
+        line-height: 1.55 !important;
+    }}
+
+    /* Tables & Dataframes Readability */
+    [data-testid="stDataFrame"] {{
+        font-size: 15px !important;
     }}
 
     /* Tabs styling */
@@ -203,9 +233,9 @@ def load_custom_css():
     }}
     .stTabs [data-baseweb="tab"] {{
         font-weight: 600;
-        font-size: 0.92rem;
+        font-size: 0.98rem;
         color: {config.COLOR_THEME["text_muted"]};
-        padding: 10px 16px;
+        padding: 10px 18px;
     }}
     .stTabs [aria-selected="true"] {{
         color: {config.COLOR_THEME["primary"]} !important;
@@ -220,19 +250,19 @@ def render_brand_header(title: str, subtitle: Optional[str] = None):
     """Renders clean editorial branding and page title."""
     st.markdown(
         f"""
-        <div style="margin-bottom: 20px; border-bottom: 1px solid {config.COLOR_THEME['border']}; padding-bottom: 14px;">
+        <div style="margin-bottom: 22px; border-bottom: 1px solid {config.COLOR_THEME['border']}; padding-bottom: 16px;">
             <div style="display: flex; align-items: baseline; gap: 10px;">
-                <span style="font-size: 1.8rem; font-weight: 800; letter-spacing: -0.03em; color: {config.COLOR_THEME['text_main']};">
+                <span style="font-size: 1.95rem; font-weight: 800; letter-spacing: -0.03em; color: {config.COLOR_THEME['text_main']};">
                     VeriScope <span style="color: {config.COLOR_THEME['primary']};">AI</span>
                 </span>
-                <span style="font-size: 0.88rem; color: {config.COLOR_THEME['text_muted']}; font-weight: 500;">
+                <span style="font-size: 0.94rem; color: {config.COLOR_THEME['text_muted']}; font-weight: 500;">
                     {config.BRAND_TAGLINE}
                 </span>
             </div>
-            <h2 style="font-size: 1.35rem; font-weight: 600; color: {config.COLOR_THEME['text_main']}; margin-top: 6px; margin-bottom: 2px;">
+            <h2 style="font-size: 1.45rem; font-weight: 600; color: {config.COLOR_THEME['text_main']}; margin-top: 8px; margin-bottom: 4px;">
                 {title}
             </h2>
-            {f'<p style="color: {config.COLOR_THEME["text_secondary"]}; font-size: 0.92rem; margin-top: 2px; margin-bottom: 0;">{subtitle}</p>' if subtitle else ''}
+            {f'<p style="color: {config.COLOR_THEME["text_secondary"]}; font-size: 0.98rem; margin-top: 2px; margin-bottom: 0;">{subtitle}</p>' if subtitle else ''}
         </div>
         """,
         unsafe_allow_html=True,
@@ -340,7 +370,12 @@ def build_horizontal_bar_chart(
     return fig
 
 
-def build_confusion_matrix_heatmap(cm: List[List[int]], class_names: List[str] = config.LABEL_CLASSES) -> go.Figure:
+def build_confusion_matrix_heatmap(
+    cm: List[List[int]],
+    class_names: List[str] = config.LABEL_CLASSES,
+    height: int = 260,
+    title: Optional[str] = None,
+) -> go.Figure:
     """Creates a high-contrast editorial heatmap for the confusion matrix."""
     z = cm
     x = [f"Pred {c}" for c in class_names]
@@ -359,14 +394,18 @@ def build_confusion_matrix_heatmap(cm: List[List[int]], class_names: List[str] =
         )
     )
 
-    fig.update_layout(
+    layout_kwargs = dict(
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        margin=dict(l=10, r=10, t=30, b=10),
-        height=280,
-        xaxis=dict(tickfont=dict(color="#475569")),
-        yaxis=dict(tickfont=dict(color="#475569"), autorange="reversed"),
+        margin=dict(l=10, r=10, t=35 if title else 25, b=10),
+        height=height,
+        xaxis=dict(tickfont=dict(color="#475569", size=11)),
+        yaxis=dict(tickfont=dict(color="#475569", size=11), autorange="reversed"),
     )
+    if title:
+        layout_kwargs["title"] = dict(text=title, font=dict(color="#0F172A", size=13))
+
+    fig.update_layout(**layout_kwargs)
     return fig
 
 

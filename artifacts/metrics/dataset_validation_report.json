@@ -1,22 +1,23 @@
 {
-  "total_records": 400,
+  "total_records": 44267,
   "null_counts": {
     "title": 0,
     "text": 0,
-    "label": 0,
-    "category": 0
+    "category": 0,
+    "date": 0,
+    "label": 0
   },
   "empty_text_records": 0,
-  "duplicate_texts": 384,
-  "duplicate_titles": 0,
+  "duplicate_texts": 5623,
+  "duplicate_titles": 5985,
   "class_distribution": {
-    "Likely Real": 200,
-    "Likely Fake": 200
+    "Likely Fake": 22851,
+    "Likely Real": 21416
   },
   "word_count_summary": {
-    "mean_words": 95.75,
-    "median_words": 93.0,
-    "min_words": 76,
-    "max_words": 129
+    "mean_words": 411.0593444326473,
+    "median_words": 365.0,
+    "min_words": 1,
+    "max_words": 8135
   }
 }

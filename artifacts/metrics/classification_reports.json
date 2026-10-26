@@ -1,83 +1,83 @@
 {
   "Logistic Regression": {
     "Likely Real": {
-      "precision": 1.0,
-      "recall": 1.0,
-      "f1-score": 1.0,
-      "support": 30.0
+      "precision": 0.9742568188783328,
+      "recall": 0.9921972534332085,
+      "f1-score": 0.9831451987010978,
+      "support": 3204.0
     },
     "Likely Fake": {
-      "precision": 1.0,
-      "recall": 1.0,
-      "f1-score": 1.0,
-      "support": 30.0
+      "precision": 0.9926943308007014,
+      "recall": 0.9758690031600115,
+      "f1-score": 0.9842097638707809,
+      "support": 3481.0
     },
-    "accuracy": 1.0,
+    "accuracy": 0.9836948391922213,
     "macro avg": {
-      "precision": 1.0,
-      "recall": 1.0,
-      "f1-score": 1.0,
-      "support": 60.0
+      "precision": 0.9834755748395171,
+      "recall": 0.9840331282966099,
+      "f1-score": 0.9836774812859393,
+      "support": 6685.0
     },
     "weighted avg": {
-      "precision": 1.0,
-      "recall": 1.0,
-      "f1-score": 1.0,
-      "support": 60.0
+      "precision": 0.9838575636803919,
+      "recall": 0.9836948391922213,
+      "f1-score": 0.9836995369741968,
+      "support": 6685.0
     }
   },
   "Multinomial Naive Bayes": {
     "Likely Real": {
-      "precision": 1.0,
-      "recall": 1.0,
-      "f1-score": 1.0,
-      "support": 30.0
+      "precision": 0.9392248062015504,
+      "recall": 0.9453807740324595,
+      "f1-score": 0.9422927360398196,
+      "support": 3204.0
     },
     "Likely Fake": {
-      "precision": 1.0,
-      "recall": 1.0,
-      "f1-score": 1.0,
-      "support": 30.0
+      "precision": 0.9494219653179191,
+      "recall": 0.9436943407066934,
+      "f1-score": 0.9465494885463189,
+      "support": 3481.0
     },
-    "accuracy": 1.0,
+    "accuracy": 0.9445026178010472,
     "macro avg": {
-      "precision": 1.0,
-      "recall": 1.0,
-      "f1-score": 1.0,
-      "support": 60.0
+      "precision": 0.9443233857597347,
+      "recall": 0.9445375573695765,
+      "f1-score": 0.9444211122930692,
+      "support": 6685.0
     },
     "weighted avg": {
-      "precision": 1.0,
-      "recall": 1.0,
-      "f1-score": 1.0,
-      "support": 60.0
+      "precision": 0.9445346507616222,
+      "recall": 0.9445026178010472,
+      "f1-score": 0.9445093037997484,
+      "support": 6685.0
     }
   },
   "Linear SVM": {
     "Likely Real": {
-      "precision": 1.0,
-      "recall": 1.0,
-      "f1-score": 1.0,
-      "support": 30.0
+      "precision": 0.9713327233912779,
+      "recall": 0.9940699126092385,
+      "f1-score": 0.9825697979330557,
+      "support": 3204.0
     },
     "Likely Fake": {
-      "precision": 1.0,
-      "recall": 1.0,
-      "f1-score": 1.0,
-      "support": 30.0
+      "precision": 0.9944216089254257,
+      "recall": 0.9729962654409653,
+      "f1-score": 0.9835922753012923,
+      "support": 3481.0
     },
-    "accuracy": 1.0,
+    "accuracy": 0.9830964846671653,
     "macro avg": {
-      "precision": 1.0,
-      "recall": 1.0,
-      "f1-score": 1.0,
-      "support": 60.0
+      "precision": 0.9828771661583517,
+      "recall": 0.983533089025102,
+      "f1-score": 0.983081036617174,
+      "support": 6685.0
     },
     "weighted avg": {
-      "precision": 1.0,
-      "recall": 1.0,
-      "f1-score": 1.0,
-      "support": 60.0
+      "precision": 0.9833555222760002,
+      "recall": 0.9830964846671653,
+      "f1-score": 0.9831022203292908,
+      "support": 6685.0
     }
   }
 }

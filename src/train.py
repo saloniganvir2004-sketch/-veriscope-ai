@@ -13,6 +13,7 @@ import pandas as pd
 import numpy as np
 import joblib
 
+from datetime import datetime
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.naive_bayes import MultinomialNB
@@ -31,6 +32,7 @@ import config
 from src.data_loader import (
     load_raw_dataset,
     validate_dataset_schema,
+    leakage_safe_group_split,
     save_processed_splits,
 )
 from src.preprocessing import (
@@ -42,13 +44,16 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger("VeritasTrainer")
 
 
-def prepare_dataset_splits() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def prepare_dataset_splits(use_external: bool = True) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, str]:
     """
-    Loads raw data, performs schema and leakage audit, cleans text, and generates
-    strictly stratified 70% Train, 15% Validation, and 15% Test partitions.
+    Loads raw data (preferring the external ISOT dataset when available, with clean fallback
+    to synthetic benchmark), performs schema and leakage audit, cleans text, and generates
+    strictly group-aware, leakage-free 70% Train, 15% Validation, and 15% Test partitions.
+    Guarantees that all duplicate copies of any article body are confined to the same partition.
     """
-    logger.info("Loading dataset for training pipeline...")
-    df = load_raw_dataset()
+    source_pref = "external" if use_external else "synthetic"
+    logger.info(f"Loading dataset for training pipeline (source preference: {source_pref})...")
+    df, dataset_name = load_raw_dataset(source=source_pref, return_source_name=True)
     schema_report = validate_dataset_schema(df)
 
     # Save schema validation report
@@ -65,36 +70,93 @@ def prepare_dataset_splits() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     # Filter any empty or null rows after cleaning
     df = df[df["combined_text"].str.strip() != ""].copy()
 
-    # Stratified Split: 70% Train, 30% temp
-    train_df, temp_df = train_test_split(
+    # Leakage-Safe Group Partitioning (strictly isolates duplicate article bodies)
+    logger.info("Partitioning data with group-based leakage protection...")
+    train_df, val_df, test_df, leakage_report = leakage_safe_group_split(
         df,
-        test_size=(config.VAL_RATIO + config.TEST_RATIO),
-        stratify=df["label"],
-        random_state=config.RANDOM_SEED,
+        train_ratio=config.TRAIN_RATIO,
+        val_ratio=config.VAL_RATIO,
+        test_ratio=config.TEST_RATIO,
+        random_seed=config.RANDOM_SEED,
     )
+    leakage_report["dataset_name"] = dataset_name
 
-    # Split temp 50/50 into 15% Val and 15% Test
-    val_df, test_df = train_test_split(
-        temp_df,
-        test_size=0.50,
-        stratify=temp_df["label"],
-        random_state=config.RANDOM_SEED,
-    )
+    # Save comprehensive leakage and dataset audit report
+    with open(config.METRICS_DIR / "dataset_audit_report.json", "w") as f:
+        json.dump(leakage_report, f, indent=2)
 
     save_processed_splits(train_df, val_df, test_df)
-    return train_df, val_df, test_df
+    return train_df, val_df, test_df, dataset_name
 
 
-def train_and_evaluate_all():
+def evaluate_on_synthetic_benchmark(
+    models_dict: Dict[str, Any],
+    vectorizer: Any,
+) -> Dict[str, Any]:
+    """
+    Evaluates trained models on the synthetic regression benchmark dataset
+    to preserve regression tracking and clearly distinguish synthetic from external evaluation.
+    """
+    synthetic_path = config.DATA_SYNTHETIC_PATH
+    if not synthetic_path.exists():
+        logger.warning(f"Synthetic benchmark dataset not found at {synthetic_path}.")
+        return {}
+
+    df_synth = pd.read_csv(synthetic_path)
+    # Perform group-aware split on synthetic benchmark
+    _, _, test_synth, _ = leakage_safe_group_split(
+        df_synth,
+        train_ratio=config.TRAIN_RATIO,
+        val_ratio=config.VAL_RATIO,
+        test_ratio=config.TEST_RATIO,
+        random_seed=config.RANDOM_SEED,
+    )
+
+    test_synth["combined_text"] = test_synth.apply(
+        lambda r: prepare_input_text(str(r["title"]), str(r["text"]), remove_publisher_tags=True),
+        axis=1,
+    )
+    X_synth_test = vectorizer.transform(test_synth["combined_text"])
+    y_synth_test = test_synth["label"].values
+
+    synth_results = {}
+    for name, model in models_dict.items():
+        preds = model.predict(X_synth_test)
+        synth_results[name] = {
+            "accuracy": round(float(accuracy_score(y_synth_test, preds)), 4),
+            "macro_f1": round(float(f1_score(y_synth_test, preds, average="macro", zero_division=0)), 4),
+            "macro_precision": round(float(precision_score(y_synth_test, preds, average="macro", zero_division=0)), 4),
+            "macro_recall": round(float(recall_score(y_synth_test, preds, average="macro", zero_division=0)), 4),
+            "total_samples": int(len(y_synth_test)),
+            "correct_predictions": int(np.sum(preds == y_synth_test)),
+            "error_count": int(np.sum(preds != y_synth_test)),
+        }
+
+    synth_summary = {
+        "dataset_name": "Synthetic Benchmark Dataset (Regression Test)",
+        "evaluation_timestamp": datetime.now().isoformat(),
+        "total_benchmark_records": len(df_synth),
+        "held_out_test_samples": len(test_synth),
+        "evaluations": synth_results,
+    }
+
+    with open(config.METRICS_DIR / "synthetic_benchmark_comparison.json", "w") as f:
+        json.dump(synth_summary, f, indent=2)
+
+    logger.info("Synthetic benchmark regression evaluation completed and persisted.")
+    return synth_summary
+
+
+def train_and_evaluate_all(use_external: bool = True):
     """
     Executes full training across the three candidate models:
     1. Logistic Regression
     2. Multinomial Naive Bayes
     3. Calibrated Linear SVM
     """
-    train_df, val_df, test_df = prepare_dataset_splits()
+    train_df, val_df, test_df, dataset_name = prepare_dataset_splits(use_external=use_external)
 
-    logger.info(f"Split sizes: Train={len(train_df)}, Val={len(val_df)}, Test={len(test_df)}")
+    logger.info(f"Dataset: '{dataset_name}' | Split sizes: Train={len(train_df):,}, Val={len(val_df):,}, Test={len(test_df):,}")
 
     # 1. Fit TF-IDF Vectorizer STRICTLY on training split
     vectorizer = fit_and_save_vectorizer(
@@ -178,6 +240,9 @@ def train_and_evaluate_all():
         test_prec = precision_score(y_test, test_preds, average="macro", zero_division=0)
         test_rec = recall_score(y_test, test_preds, average="macro", zero_division=0)
 
+        correct_count = int(np.sum(test_preds == y_test))
+        error_count = int(np.sum(test_preds != y_test))
+
         # Per-class metrics
         report = classification_report(y_test, test_preds, target_names=config.LABEL_CLASSES, output_dict=True, zero_division=0)
         cm = confusion_matrix(y_test, test_preds).tolist()
@@ -187,6 +252,9 @@ def train_and_evaluate_all():
             "macro_f1": round(float(test_f1), 4),
             "macro_precision": round(float(test_prec), 4),
             "macro_recall": round(float(test_rec), 4),
+            "total_samples": int(len(y_test)),
+            "correct_predictions": correct_count,
+            "error_count": error_count,
         }
         test_evaluations[name] = model_results[name]["test"]
         confusion_matrices[name] = cm
@@ -206,6 +274,22 @@ def train_and_evaluate_all():
     # Save metrics
     metrics_summary = {
         "best_model_name": best_model_name,
+        "training_timestamp": datetime.now().isoformat(),
+        "random_seed": config.RANDOM_SEED,
+        "evaluation_dataset": dataset_name,
+        "is_external": "ISOT" in dataset_name,
+        "leakage_prevention": "group_aware_stratified_split",
+        "partition_sizes": {
+            "train": len(train_df),
+            "val": len(val_df),
+            "test": len(test_df),
+        },
+        "selection_rationale": (
+            f"Selected based on highest validation Macro F1 score "
+            f"({model_results[best_model_name]['validation']['macro_f1']:.4f}). "
+            f"{best_model_name} provides robust probability calibration, continuous log-odds interpretability, "
+            f"and direct mathematical compatibility with shap.LinearExplainer."
+        ),
         "comparison": model_results,
         "test_evaluations": test_evaluations,
     }
@@ -218,6 +302,9 @@ def train_and_evaluate_all():
 
     with open(config.METRICS_DIR / "classification_reports.json", "w") as f:
         json.dump(classification_reports, f, indent=2)
+
+    # 6. Secondary Evaluation: Regression Test on Synthetic Benchmark (keeps both distinct)
+    evaluate_on_synthetic_benchmark(fitted_models, vectorizer)
 
     logger.info("Training and evaluation completed successfully. All artifacts persisted.")
     return metrics_summary

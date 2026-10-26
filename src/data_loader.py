@@ -5,10 +5,13 @@ for fake and real news datasets.
 """
 
 import os
+import re
 import json
+import hashlib
 import logging
+from datetime import datetime
 from pathlib import Path
-from typing import Tuple, Dict, Any, Optional
+from typing import Tuple, Dict, Any, Optional, List, Union
 import pandas as pd
 import numpy as np
 
@@ -16,6 +19,174 @@ import config
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("VeritasDataLoader")
+
+
+def normalize_body_text(text: str) -> str:
+    """
+    Normalizes article text for reliable duplicate and body group detection:
+    - Strips URL links and trailing/leading whitespace
+    - Removes common wire service / publisher headers
+    - Collapses multiple whitespace characters and converts to lower case
+    """
+    if not isinstance(text, str):
+        return ""
+    cleaned = re.sub(r"https?://\S+|www\.\S+", " ", text)
+    for pattern in config.WIRE_SERVICE_PATTERNS:
+        cleaned = re.sub(pattern, " ", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip().lower()
+    return cleaned
+
+
+def audit_and_group_dataset(df: pd.DataFrame) -> Tuple[pd.DataFrame, Dict[str, Any]]:
+    """
+    Audits article body duplicates and assigns a canonical body group hash.
+    Detects if any identical body has conflicting classification labels.
+    Strictly purges empty, null, or whitespace-only records before grouping.
+    """
+    df = df.copy()
+
+    initial_records = len(df)
+    # Filter empty or whitespace-only texts and titles
+    df = df[df["text"].fillna("").astype(str).str.strip() != ""].copy()
+    empty_dropped = initial_records - len(df)
+
+    if "body_hash" not in df.columns:
+        norm_series = df["text"].apply(normalize_body_text)
+        df["norm_body"] = norm_series
+        # Filter records where body text had no alphanumeric content after normalization
+        df = df[df["norm_body"] != ""].copy()
+        df["body_hash"] = df["norm_body"].apply(lambda x: hashlib.sha256(x.encode("utf-8")).hexdigest()[:16])
+
+    # Check for contradictory labels on identical article bodies
+    label_conflicts = df.groupby("body_hash")["label"].nunique()
+    conflicting_hashes = label_conflicts[label_conflicts > 1].index.tolist()
+    if conflicting_hashes:
+        error_msg = f"Data Integrity Violation: Found {len(conflicting_hashes)} identical article bodies with conflicting labels!"
+        logger.error(error_msg)
+        raise ValueError(error_msg)
+
+    total_records = len(df)
+    unique_groups = df["body_hash"].nunique()
+    duplicate_records = total_records - unique_groups
+
+    # Class distribution by body group
+    group_df = df[["body_hash", "label"]].drop_duplicates()
+    group_class_dist = {
+        config.LABEL_NAMES.get(k, str(k)): int(v)
+        for k, v in group_df["label"].value_counts().items()
+    }
+
+    audit_summary = {
+        "initial_raw_records": initial_records,
+        "empty_records_dropped": empty_dropped,
+        "total_records": total_records,
+        "unique_body_groups": unique_groups,
+        "duplicate_records": duplicate_records,
+        "conflicting_labels_count": len(conflicting_hashes),
+        "group_class_distribution": group_class_dist,
+        "is_leakage_risk_detected": duplicate_records > 0,
+    }
+
+    logger.info(
+        f"Dataset Group Audit: {unique_groups:,} unique bodies across {total_records:,} rows "
+        f"({duplicate_records:,} duplicate bodies, {empty_dropped} empty dropped)."
+    )
+    return df, audit_summary
+
+
+def leakage_safe_group_split(
+    df: pd.DataFrame,
+    train_ratio: float = 0.70,
+    val_ratio: float = 0.15,
+    test_ratio: float = 0.15,
+    random_seed: int = 42,
+) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, Dict[str, Any]]:
+    """
+    Performs leakage-safe, group-aware partitioning.
+    Ensures that ALL duplicate instances of any normalized article body are confined
+    to EXACTLY ONE partition (Train, Validation, or Test).
+    Stratifies at the group level by class label to preserve balanced representation.
+    """
+    df_grouped, audit_info = audit_and_group_dataset(df)
+
+    group_df = df_grouped[["body_hash", "label"]].drop_duplicates()
+
+    train_hashes: List[str] = []
+    val_hashes: List[str] = []
+    test_hashes: List[str] = []
+
+    for label_val in sorted(group_df["label"].unique()):
+        class_hashes = group_df[group_df["label"] == label_val]["body_hash"].values
+        rng = np.random.RandomState(random_seed)
+        shuffled = rng.permutation(class_hashes)
+        n = len(shuffled)
+
+        n_train = max(1, int(round(n * train_ratio)))
+        n_val = max(1, int(round(n * val_ratio)))
+        if n >= 3:
+            n_test = n - n_train - n_val
+            if n_test < 1:
+                n_train -= 1
+                n_test = 1
+        else:
+            n_val = 0
+            n_test = n - n_train
+
+        train_hashes.extend(shuffled[:n_train])
+        val_hashes.extend(shuffled[n_train : n_train + n_val])
+        test_hashes.extend(shuffled[n_train + n_val :])
+
+    train_set = set(train_hashes)
+    val_set = set(val_hashes)
+    test_set = set(test_hashes)
+
+    # Rigorous leakage verification assertions
+    assert train_set.isdisjoint(val_set), "Leakage detected: Train and Val share identical article bodies!"
+    assert train_set.isdisjoint(test_set), "Leakage detected: Train and Test share identical article bodies!"
+    assert val_set.isdisjoint(test_set), "Leakage detected: Val and Test share identical article bodies!"
+
+    train_df = df_grouped[df_grouped["body_hash"].isin(train_set)].copy().reset_index(drop=True)
+    val_df = df_grouped[df_grouped["body_hash"].isin(val_set)].copy().reset_index(drop=True)
+    test_df = df_grouped[df_grouped["body_hash"].isin(test_set)].copy().reset_index(drop=True)
+
+    def get_split_stats(split_df: pd.DataFrame, hashes_set: set) -> Dict[str, Any]:
+        c_counts = split_df["label"].value_counts().to_dict()
+        return {
+            "records": len(split_df),
+            "unique_body_groups": len(hashes_set),
+            "class_distribution": {config.LABEL_NAMES.get(k, str(k)): int(v) for k, v in c_counts.items()},
+        }
+
+    leakage_audit_report = {
+        "timestamp": datetime.now().isoformat(),
+        "random_seed": random_seed,
+        "target_ratios": {"train": train_ratio, "val": val_ratio, "test": test_ratio},
+        "actual_records": {
+            "train": len(train_df),
+            "val": len(val_df),
+            "test": len(test_df),
+            "total": len(df),
+        },
+        "actual_ratios": {
+            "train": round(len(train_df) / len(df), 4),
+            "val": round(len(val_df) / len(df), 4),
+            "test": round(len(test_df) / len(df), 4),
+        },
+        "zero_leakage_verified": True,
+        "duplicate_bodies_in_dataset": audit_info["duplicate_records"],
+        "conflicting_labels_detected": audit_info["conflicting_labels_count"],
+        "splits": {
+            "train": get_split_stats(train_df, train_set),
+            "validation": get_split_stats(val_df, val_set),
+            "test": get_split_stats(test_df, test_set),
+        },
+    }
+
+    logger.info(
+        f"Leakage-safe split generated: Train={len(train_df)} ({len(train_set)} groups), "
+        f"Val={len(val_df)} ({len(val_set)} groups), Test={len(test_df)} ({len(test_set)} groups)."
+    )
+    return train_df, val_df, test_df, leakage_audit_report
 
 
 def validate_dataset_schema(df: pd.DataFrame) -> Dict[str, Any]:
@@ -196,57 +367,106 @@ def generate_benchmark_dataset(target_path: Optional[Path] = None) -> pd.DataFra
     return df
 
 
-def load_raw_dataset(raw_dir: Path = config.DATA_RAW_DIR) -> pd.DataFrame:
+def is_external_dataset_available(isot_dir: Path = config.DATA_ISOT_DIR) -> bool:
+    """Checks whether the external ISOT True.csv and Fake.csv files are present and valid."""
+    true_csv = isot_dir / "True.csv"
+    fake_csv = isot_dir / "Fake.csv"
+    return (
+        true_csv.exists()
+        and fake_csv.exists()
+        and true_csv.stat().st_size > 1_000_000
+        and fake_csv.stat().st_size > 1_000_000
+    )
+
+
+def load_external_isot_dataset(isot_dir: Path = config.DATA_ISOT_DIR) -> pd.DataFrame:
     """
-    Attempts to locate and load raw dataset files.
-    Supports:
-    1. Separate True.csv and Fake.csv (Standard ISOT format)
-    2. Single unified dataset (e.g., isot.csv, welfake.csv, or news.csv)
-    3. Fallback to generating the verified benchmark dataset if no raw files are placed yet.
+    Loads and integrates the external ISOT Fake News Dataset (University of Victoria).
+    True.csv -> label = config.LABEL_REAL (0)
+    Fake.csv -> label = config.LABEL_FAKE (1)
+    Filters out empty or whitespace-only records.
     """
-    true_csv = raw_dir / "True.csv"
-    fake_csv = raw_dir / "Fake.csv"
+    true_csv = isot_dir / "True.csv"
+    fake_csv = isot_dir / "Fake.csv"
 
-    if true_csv.exists() and fake_csv.exists():
-        logger.info(f"Found ISOT format files: {true_csv.name} and {fake_csv.name}")
-        df_true = pd.read_csv(true_csv)
-        df_fake = pd.read_csv(fake_csv)
+    if not (true_csv.exists() and fake_csv.exists()):
+        instruction = (
+            f"External ISOT dataset files missing! Please place 'True.csv' and 'Fake.csv' "
+            f"directly inside '{isot_dir.resolve()}'."
+        )
+        logger.error(instruction)
+        raise FileNotFoundError(instruction)
 
-        df_true["label"] = config.LABEL_REAL
-        df_fake["label"] = config.LABEL_FAKE
+    logger.info(f"Loading external ISOT dataset from {isot_dir}...")
+    df_true = pd.read_csv(true_csv)
+    df_fake = pd.read_csv(fake_csv)
 
-        df = pd.concat([df_true, df_fake], ignore_index=True)
-        # Harmonize column names
-        df.rename(columns={"text": "text", "title": "title"}, inplace=True)
-        logger.info(f"Loaded {len(df)} records from raw ISOT dataset.")
-        return df
+    df_true["label"] = config.LABEL_REAL
+    df_fake["label"] = config.LABEL_FAKE
 
-    # Check for single unified CSV
-    csv_candidates = list(raw_dir.glob("*.csv"))
-    if csv_candidates:
-        primary_csv = csv_candidates[0]
-        logger.info(f"Loading single dataset file: {primary_csv.name}")
-        df = pd.read_csv(primary_csv)
-        # Harmonize column names
-        cols = {c.lower(): c for c in df.columns}
-        title_col = cols.get("title", cols.get("headline", None))
-        text_col = cols.get("text", cols.get("article", cols.get("body", None)))
-        label_col = cols.get("label", cols.get("target", cols.get("class", None)))
+    df = pd.concat([df_true, df_fake], ignore_index=True)
 
-        if title_col and text_col and label_col:
-            df = df.rename(columns={title_col: "title", text_col: "text", label_col: "label"})
-            # Ensure integer labels (0 = Real, 1 = Fake)
-            if df["label"].dtype == object:
-                df["label"] = df["label"].astype(str).str.lower().map({
-                    "real": config.LABEL_REAL, "true": config.LABEL_REAL, "0": config.LABEL_REAL,
-                    "fake": config.LABEL_FAKE, "false": config.LABEL_FAKE, "1": config.LABEL_FAKE
-                })
-            return df
+    # Standardize column naming
+    rename_map = {"text": "text", "title": "title", "subject": "category"}
+    df = df.rename(columns={c: rename_map[c] for c in df.columns if c in rename_map})
 
-    # Fallback to benchmark dataset
-    fallback_path = raw_dir / "benchmark_fake_news.csv"
-    logger.info("No raw external dataset found in data/raw/. Generating verified benchmark dataset...")
-    return generate_benchmark_dataset(fallback_path)
+    # Drop null or completely empty text bodies
+    initial_len = len(df)
+    df = df[df["text"].fillna("").astype(str).str.strip() != ""].copy()
+    dropped = initial_len - len(df)
+
+    logger.info(
+        f"Loaded external ISOT dataset: {len(df):,} valid records "
+        f"({(df['label'] == config.LABEL_REAL).sum():,} Real, {(df['label'] == config.LABEL_FAKE).sum():,} Fake, "
+        f"{dropped} empty dropped)."
+    )
+    df.attrs["dataset_name"] = "ISOT Fake News Dataset (External)"
+    return df
+
+
+def load_synthetic_dataset(path: Path = config.DATA_SYNTHETIC_PATH) -> pd.DataFrame:
+    """Loads the synthetic regression benchmark dataset from data/raw/."""
+    if not path.exists():
+        logger.info(f"Synthetic benchmark not found at {path}. Generating fallback...")
+        df = generate_benchmark_dataset(path)
+    else:
+        df = pd.read_csv(path)
+    df.attrs["dataset_name"] = "Synthetic Benchmark Dataset"
+    return df
+
+
+def load_raw_dataset(
+    raw_dir: Path = config.DATA_RAW_DIR,
+    external_dir: Path = config.DATA_ISOT_DIR,
+    source: str = "auto",
+    return_source_name: bool = False,
+) -> Union[pd.DataFrame, Tuple[pd.DataFrame, str]]:
+    """
+    Unified dataset acquisition engine.
+    - If source in ['auto', 'external', 'isot'] and external files exist in data/external/isot/:
+      Loads and validates the real-world ISOT dataset.
+    - Otherwise falls back to the synthetic benchmark in data/raw/, preserving it for regression testing.
+    - If external was requested but files are missing, logs precise placement instructions.
+    """
+    dataset_name = "Synthetic Benchmark Dataset"
+    if source.lower() in ["auto", "external", "isot"]:
+        if is_external_dataset_available(external_dir):
+            df = load_external_isot_dataset(external_dir)
+            dataset_name = "ISOT Fake News Dataset (External)"
+        else:
+            if source.lower() in ["external", "isot"]:
+                logger.warning(
+                    f"External dataset requested but True.csv / Fake.csv not found in {external_dir}. "
+                    f"Falling back to synthetic benchmark dataset."
+                )
+            df = load_synthetic_dataset(raw_dir / "benchmark_fake_news.csv")
+    else:
+        df = load_synthetic_dataset(raw_dir / "benchmark_fake_news.csv")
+
+    df.attrs["dataset_name"] = dataset_name
+    if return_source_name:
+        return df, dataset_name
+    return df
 
 
 def save_processed_splits(train_df: pd.DataFrame, val_df: pd.DataFrame, test_df: pd.DataFrame, out_dir: Path = config.DATA_PROCESSED_DIR):

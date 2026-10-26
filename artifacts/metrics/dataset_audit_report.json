@@ -1,0 +1,50 @@
+{
+  "timestamp": "2026-10-26T11:09:26.551051",
+  "random_seed": 42,
+  "target_ratios": {
+    "train": 0.7,
+    "val": 0.15,
+    "test": 0.15
+  },
+  "actual_records": {
+    "train": 30869,
+    "val": 6629,
+    "test": 6685,
+    "total": 44258
+  },
+  "actual_ratios": {
+    "train": 0.6975,
+    "val": 0.1498,
+    "test": 0.151
+  },
+  "zero_leakage_verified": true,
+  "duplicate_bodies_in_dataset": 5600,
+  "conflicting_labels_detected": 0,
+  "splits": {
+    "train": {
+      "records": 30869,
+      "unique_body_groups": 27008,
+      "class_distribution": {
+        "Likely Fake": 15860,
+        "Likely Real": 15009
+      }
+    },
+    "validation": {
+      "records": 6629,
+      "unique_body_groups": 5787,
+      "class_distribution": {
+        "Likely Fake": 3426,
+        "Likely Real": 3203
+      }
+    },
+    "test": {
+      "records": 6685,
+      "unique_body_groups": 5788,
+      "class_distribution": {
+        "Likely Fake": 3481,
+        "Likely Real": 3204
+      }
+    }
+  },
+  "dataset_name": "ISOT Fake News Dataset (External)"
+}

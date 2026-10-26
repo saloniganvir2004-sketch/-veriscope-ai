@@ -12,6 +12,13 @@ BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
 DATA_RAW_DIR = DATA_DIR / "raw"
 DATA_PROCESSED_DIR = DATA_DIR / "processed"
+DATA_EXTERNAL_DIR = DATA_DIR / "external"
+DATA_ISOT_DIR = DATA_EXTERNAL_DIR / "isot"
+
+# Dataset file paths (synthetic preserved for regression, external stored separately)
+DATA_SYNTHETIC_PATH = DATA_RAW_DIR / "benchmark_fake_news.csv"
+ISOT_TRUE_PATH = DATA_ISOT_DIR / "True.csv"
+ISOT_FAKE_PATH = DATA_ISOT_DIR / "Fake.csv"
 
 ARTIFACTS_DIR = BASE_DIR / "artifacts"
 MODELS_DIR = ARTIFACTS_DIR / "models"
@@ -23,7 +30,7 @@ ASSETS_DIR = BASE_DIR / "assets"
 DB_PATH = ARTIFACTS_DIR / "veritas_history.db"
 
 # Ensure all critical folders exist
-for p in [DATA_RAW_DIR, DATA_PROCESSED_DIR, MODELS_DIR, METRICS_DIR, EXPERIMENTS_DIR, REPORTS_DIR, ASSETS_DIR]:
+for p in [DATA_RAW_DIR, DATA_PROCESSED_DIR, DATA_EXTERNAL_DIR, DATA_ISOT_DIR, MODELS_DIR, METRICS_DIR, EXPERIMENTS_DIR, REPORTS_DIR, ASSETS_DIR]:
     p.mkdir(parents=True, exist_ok=True)
 
 # -----------------------------------------------------------------------------
@@ -44,8 +51,7 @@ TEST_RATIO = 0.15
 
 # Leakage Sanitization regex patterns (Publisher and wire service headers)
 WIRE_SERVICE_PATTERNS = [
-    r"^\s*([A-Z\s]{2,25})?\s*\(\s*Reuters\s*\)\s*[-–—:]\s*",
-    r"^\s*([A-Z\s]{2,25})?\s*\(\s*(AP|Associated Press|Bloomberg|AFP)\s*\)\s*[-–—:]\s*",
+    r"^\s*([A-Za-z0-9\s/,\.]{2,40})?\s*\(\s*(Reuters|AP|Associated Press|Bloomberg|AFP)\s*\)\s*[-–—:]?\s*",
     r"^\s*[A-Z\s]{2,25}\s*[-–—]\s*",  # General all-caps city prefix like "WASHINGTON —"
     r"\(Reuters\)",
     r"\(AP\)",
